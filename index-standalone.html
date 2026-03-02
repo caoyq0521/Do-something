@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>教学界面 - 数轴学习</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+    // 通用数轴组件
+    function NumberLine({ min = 0, max = 20, highlightNumbers = [], showArrows = false, gradientThickness = false, gradientFontSize = false, hideNumbers = [], arrowColors = {}, onNumberClick = null }) {
+      const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+      
+      const getThickness = (num) => {
+        if (!gradientThickness) return 2;
+        return 2 + (num / max) * 6;
+      };
+      
+      const getFontSize = (num) => {
+        if (!gradientFontSize) return 16;
+        return 14 + (num / max) * 10;
+      };
+
+      // 获取箭头颜色
+      const getArrowColor = (num) => {
+        if (arrowColors[num]) return arrowColors[num];
+        return '#ef4444';
+      };
+
+      // 获取所有需要显示箭头的数字（包括小数）
+      const getArrowNumbers = () => {
+        const arrowNums = [];
+        Object.keys(arrowColors).forEach(key => {
+          const num = parseFloat(key);
+          if (!isNaN(num)) {
+            arrowNums.push(num);
+          }
+        });
+        return arrowNums;
+      };
+
+      return (
+        <div className="relative py-12 px-4">
+          <div className="relative h-1 bg-gray-800 rounded-full">
+            {gradientThickness && (
+              <div 
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: '#1f2937',
+                  clipPath: 'polygon(0 40%, 100% 0%, 100% 100%, 0 60%)',
+                }}
+              />
+            )}
+            
+            {numbers.map((num) => {
+              const position = ((num - min) / (max - min)) * 100;
+              const isHighlighted = highlightNumbers.includes(num);
+              const isHidden = hideNumbers.includes(num);
+              
+              return (
+                <div
+                  key={num}
+                  className="absolute transform -translate-x-1/2"
+                  style={{ left: `${position}%` }}
+                >
+                  {/* 刻度线只在上方显示 */}
+                  <div 
+                    className={`w-0.5 ${isHighlighted ? 'bg-red-500' : 'bg-gray-800'}`}
+                    style={{ 
+                      height: `${12 + getThickness(num)}px`,
+                      marginTop: `-${12 + getThickness(num)}px`
+                    }}
+                  />
+                  
+                  {!isHidden && (
+                    <div 
+                      className={`absolute top-2 left-1/2 transform -translate-x-1/2 font-semibold text-gray-700 ${
+                        onNumberClick ? 'cursor-pointer hover:scale-110 transition-transform' : ''
+                      }`}
+                      style={{ fontSize: `${getFontSize(num)}px` }}
+                      onClick={() => onNumberClick && onNumberClick(num)}
+                    >
+                      {num}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            
+            {/* 显示箭头（支持小数位置） */}
+            {showArrows && getArrowNumbers().map((arrowNum) => {
+              const position = ((arrowNum - min) / (max - min)) * 100;
+              const arrowColor = getArrowColor(arrowNum);
+              
+              return (
+                <div
+                  key={`arrow-${arrowNum}`}
+                  className="absolute transform -translate-x-1/2"
+                  style={{ left: `${position}%` }}
+                >
+                  <div className="absolute -top-16 left-1/2 transform -translate-x-1/2">
+                    {/* 新箭头样式：竖线+三角形 */}
+                    <svg width="24" height="40" viewBox="0 0 24 40" fill="none">
+                      <rect x="10" y="0" width="4" height="28" fill={arrowColor} />
+                      <path d="M12 40L4 28h16L12 40z" fill={arrowColor} />
+                    </svg>
+                    {/* 竖着写的标签 */}
+                    <div className="absolute -top-4 left-8 transform flex flex-col" style={{ height: '60px' }}>
+                      {arrowColor === '#ef4444' ? 
+                        ['我', '的', '钱'].map((char, i) => (
+                          <span key={i} className="text-sm font-bold text-red-500" style={{ lineHeight: '1' }}>
+                            {char}
+                          </span>
+                        )) :
+                        ['物', '品', '价', '格'].map((char, i) => (
+                          <span key={i} className="text-sm font-bold text-gray-800" style={{ lineHeight: '1' }}>
+                            {char}
+                          </span>
+                        ))
+                      }
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // 界面1 - 基础数轴
+    function View1Basic() {
+      return (
+        <div className="py-8">
+          <p className="text-center text-gray-600 mb-8">
+            这是一个基础的数轴，从 0 到 20
+          </p>
+          <NumberLine />
+        </div>
+      );
+    }
+
+    // 界面2 - 拖拽练习
+    function View2Drag() {
+      const containerRef = useRef(null);
+      const [items, setItems] = useState([
+        { id: 1, value: 20, placed: false, x: 0, y: 0 },
+        { id: 2, value: 5, placed: false, x: 0, y: 0 },
+        { id: 3, value: 10, placed: false, x: 0, y: 0 },
+      ]);
+      const [dragging, setDragging] = useState(null);
+      const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+      const targetPositions = [5, 10, 20];
+      // 隐藏可拖拽的数字
+      const hideNumbers = targetPositions;
+
+      const handleDragStart = (e, id) => {
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = e.currentTarget.getBoundingClientRect();
+        
+        setDragging(id);
+        setDragOffset({ x: clientX - rect.left, y: clientY - rect.top });
+      };
+
+      const handleDragMove = (e) => {
+        if (dragging === null || !containerRef.current) return;
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        
+        setItems(prev => prev.map(item => 
+          item.id === dragging
+            ? { ...item, x: clientX - containerRect.left - dragOffset.x, y: clientY - containerRect.top - dragOffset.y }
+            : item
+        ));
+      };
+
+      const handleDragEnd = () => {
+        if (dragging === null || !containerRef.current) return;
+        
+        const item = items.find(i => i.id === dragging);
+        if (!item) return;
+
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const numberLineWidth = containerRect.width - 80;
+        const numberLineLeft = 40;
+        
+        const itemCenterX = item.x + 40;
+        const position = ((itemCenterX - numberLineLeft) / numberLineWidth) * 20;
+        
+        const isCorrectPosition = Math.abs(position - item.value) < 1.5;
+        const isInDropZone = item.y < 150;
+
+        if (isCorrectPosition && isInDropZone) {
+          setItems(prev => prev.map(i => i.id === dragging ? { ...i, placed: true } : i));
+        } else {
+          setItems(prev => prev.map(i => i.id === dragging ? { ...i, x: 0, y: 0 } : i));
+        }
+        
+        setDragging(null);
+      };
+
+      const reset = () => {
+        setItems([
+          { id: 1, value: 20, placed: false, x: 0, y: 0 },
+          { id: 2, value: 5, placed: false, x: 0, y: 0 },
+          { id: 3, value: 10, placed: false, x: 0, y: 0 },
+        ]);
+      };
+
+      const getPlacedPosition = (value) => (value / 20) * 100;
+
+      return (
+        <div 
+          ref={containerRef}
+          className="relative select-none"
+          onMouseMove={handleDragMove}
+          onMouseUp={handleDragEnd}
+          onMouseLeave={handleDragEnd}
+          onTouchMove={handleDragMove}
+          onTouchEnd={handleDragEnd}
+        >
+          <div className="relative py-12 px-10 mb-8">
+            <div className="relative h-1 bg-gray-800 rounded-full">
+              {Array.from({ length: 21 }, (_, i) => i).map((num) => {
+                const position = (num / 20) * 100;
+                const isHidden = hideNumbers.includes(num);
+                return (
+                  <div key={num} className="absolute transform -translate-x-1/2" style={{ left: `${position}%` }}>
+                    <div className="w-0.5 h-3 bg-gray-800" style={{ marginTop: '-12px' }} />
+                    {!isHidden && <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-sm font-semibold text-gray-700">{num}</div>}
+                  </div>
+                );
+              })}
+              
+              {targetPositions.map((pos) => {
+                const position = (pos / 20) * 100;
+                const isPlaced = items.find(i => i.value === pos)?.placed;
+                return (
+                  <div key={pos} className="absolute transform -translate-x-1/2 -top-16" style={{ left: `${position}%` }}>
+                    <div className={`w-16 h-16 rounded-full border-4 border-dashed transition-all ${isPlaced ? 'border-green-500 bg-green-100' : 'border-amber-400 bg-amber-50'}`} />
+                  </div>
+                );
+              })}
+              
+              {items.filter(i => i.placed).map((item) => (
+                <div key={`placed-${item.id}`} className="absolute transform -translate-x-1/2 -top-16" style={{ left: `${getPlacedPosition(item.value)}%` }}>
+                  <div className="w-16 h-16 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg">
+                    <span className="text-2xl font-bold text-blue-800">{item.value}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-gray-100 rounded-2xl p-8 mt-16">
+            <div className="flex justify-center gap-6 mb-6">
+              {items.filter(i => !i.placed).map((item) => (
+                <div
+                  key={item.id}
+                  className={`w-20 h-20 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing transition-transform ${dragging === item.id ? 'scale-110 opacity-50' : 'hover:scale-105'}`}
+                  style={dragging === item.id ? { position: 'absolute', left: item.x, top: item.y, zIndex: 100 } : {}}
+                  onMouseDown={(e) => handleDragStart(e, item.id)}
+                  onTouchStart={(e) => handleDragStart(e, item.id)}
+                >
+                  <span className="text-3xl font-bold text-blue-800">{item.value}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-gray-600 mb-4">把数字拖到数轴正确的位置</p>
+            <div className="flex justify-center">
+              <button onClick={reset} className="px-8 py-3 bg-amber-500 text-white font-semibold rounded-full hover:bg-amber-600 transition-colors shadow-lg">
+                重新开始
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 界面3 - 感受大小（点击数字显示圆片）
+    function View3Size() {
+      const [selectedNumbers, setSelectedNumbers] = useState([]);
+      const numbers = Array.from({ length: 21 }, (_, i) => i);
+
+      // 渲染圆片，5个一列
+      const renderDots = (count) => {
+        if (count === 0) return null;
+        const cols = Math.ceil(count / 5);
+        const dots = [];
+        for (let col = 0; col < cols; col++) {
+          const dotsInCol = Math.min(5, count - col * 5);
+          const colDots = [];
+          for (let row = 0; row < dotsInCol; row++) {
+            colDots.push(
+              <div key={`${col}-${row}`} className="w-2.5 h-2.5 bg-green-500 rounded-full" />
+            );
+          }
+          dots.push(
+            <div key={col} className="flex flex-col gap-0.5">
+              {colDots}
+            </div>
+          );
+        }
+        return dots;
+      };
+
+      // 数轴粗细渐变
+      const getLineHeight = (num) => 1 + (num / 20) * 5;
+
+      return (
+        <div className="py-8">
+          <p className="text-center text-gray-600 mb-8">
+            点击数字查看对应数量的圆片
+          </p>
+
+          {/* 重置按钮 */}
+          <div className="flex justify-center mb-8">
+            <button 
+              onClick={() => setSelectedNumbers([])}
+              className="px-8 py-3 bg-amber-500 text-white font-semibold rounded-full hover:bg-amber-600 transition-colors shadow-lg"
+            >
+              重置
+            </button>
+          </div>
+
+          <div className="mt-8 flex justify-center items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-1 bg-gray-800" />
+              <span className="text-sm text-gray-600">细 (小)</span>
+            </div>
+            <svg className="w-8 h-4" viewBox="0 0 32 16">
+              <path d="M0 8 L24 8 L20 4 M24 8 L20 12" stroke="#374151" strokeWidth="2" fill="none" />
+            </svg>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-3 bg-gray-800" />
+              <span className="text-sm text-gray-600">粗 (大)</span>
+            </div>
+          </div>
+          
+          {/* 自定义渐变粗细数轴 */}
+          <div className="relative py-12">
+            {/* 渐变粗细的数轴线 */}
+            <svg className="w-full h-2" preserveAspectRatio="none" viewBox="0 0 100 8">
+              <polygon points="0,3 100,0 100,8 0,5" fill="#1f2937" />
+            </svg>
+            
+            <div className="absolute inset-0 px-4" style={{ top: '48px' }}>
+              {numbers.map((num) => {
+                const position = (num / 20) * 100;
+                const tickHeight = 8 + (num / 20) * 8;
+                const fontSize = 14 + (num / 20) * 10;
+                const isSelected = selectedNumbers.includes(num);
+                
+                return (
+                  <div
+                    key={num}
+                    className="absolute transform -translate-x-1/2"
+                    style={{ left: `${position}%` }}
+                  >
+                    {/* 刻度线 */}
+                    <div 
+                      className="w-0.5 bg-gray-800"
+                      style={{ 
+                        height: `${tickHeight}px`,
+                        marginTop: `-${tickHeight}px`
+                      }}
+                    />
+                    
+                    {/* 数字 */}
+                    <div 
+                      className={`absolute top-2 left-1/2 transform -translate-x-1/2 font-semibold cursor-pointer hover:scale-110 transition-transform ${
+                        isSelected ? 'text-red-500 bg-yellow-100 px-1 rounded' : 
+                        [5, 10, 20].includes(num) ? 'text-red-500' : 'text-gray-700'
+                      }`}
+                      style={{ fontSize: `${fontSize}px` }}
+                      onClick={() => {
+                        if (selectedNumbers.includes(num)) {
+                          setSelectedNumbers(selectedNumbers.filter(n => n !== num));
+                        } else {
+                          setSelectedNumbers([...selectedNumbers, num]);
+                        }
+                      }}
+                    >
+                      {num}
+                    </div>
+                    
+                    {/* 圆点显示在对应数字下方 */}
+                    {isSelected && num > 0 && (
+                      <div className="absolute top-10 left-1/2 transform -translate-x-1/2 flex gap-0.5" style={{ marginTop: `${fontSize}px` }}>
+                        {renderDots(num)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 界面4 - 钱币对应
+    function View4Money() {
+      const containerRef = useRef(null);
+      const [items, setItems] = useState([
+        { id: 1, value: 20, label: '20元', image: 'https://pics1.baidu.com/feed/b03533fa828ba61e8f412a59f1d0941a314e5909.jpeg@f_auto?token=16c297c362431fb247ac7e99b13b2081', placed: false, x: 0, y: 0 },
+        { id: 2, value: 5, label: '5元', image: 'https://pics5.baidu.com/feed/32fa828ba61ea8d35dccf7c3337b8841271f5888.jpeg@f_auto?token=811248dce2af7edf1be7a22280bd8429', placed: false, x: 0, y: 0 },
+        { id: 3, value: 10, label: '10元', image: 'https://pics5.baidu.com/feed/9c16fdfaaf51f3de8da77f0e5b5766103b297988.jpeg@f_auto?token=8c8efb7cd85c6dc26249ce6876316f94', placed: false, x: 0, y: 0 },
+        { id: 4, value: 1, label: '1元', image: 'https://pics7.baidu.com/feed/0d338744ebf81a4c3e3cdfa38a3c1a56252da677.jpeg@f_auto?token=f0a0f033da626fc1e829a74f709bb75c', placed: false, x: 0, y: 0 },
+      ]);
+      const [dragging, setDragging] = useState(null);
+      const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+      const targetPositions = [1, 5, 10, 20];
+      // 隐藏可拖拽的数字
+      const hideNumbers = targetPositions;
+
+      const handleDragStart = (e, id) => {
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = e.currentTarget.getBoundingClientRect();
+        setDragging(id);
+        setDragOffset({ x: clientX - rect.left, y: clientY - rect.top });
+      };
+
+      const handleDragMove = (e) => {
+        if (dragging === null || !containerRef.current) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        setItems(prev => prev.map(item => 
+          item.id === dragging ? { ...item, x: clientX - containerRect.left - dragOffset.x, y: clientY - containerRect.top - dragOffset.y } : item
+        ));
+      };
+
+      const handleDragEnd = () => {
+        if (dragging === null || !containerRef.current) return;
+        const item = items.find(i => i.id === dragging);
+        if (!item) return;
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const numberLineWidth = containerRect.width - 80;
+        const numberLineLeft = 40;
+        const itemCenterX = item.x + 40;
+        const position = ((itemCenterX - numberLineLeft) / numberLineWidth) * 20;
+        const isCorrectPosition = Math.abs(position - item.value) < 1.5;
+        const isInDropZone = item.y < 150;
+
+        if (isCorrectPosition && isInDropZone) {
+          setItems(prev => prev.map(i => i.id === dragging ? { ...i, placed: true } : i));
+        } else {
+          setItems(prev => prev.map(i => i.id === dragging ? { ...i, x: 0, y: 0 } : i));
+        }
+        setDragging(null);
+      };
+
+      const reset = () => {
+        setItems([
+          { id: 1, value: 20, label: '20元', image: 'https://pics1.baidu.com/feed/b03533fa828ba61e8f412a59f1d0941a314e5909.jpeg@f_auto?token=16c297c362431fb247ac7e99b13b2081', placed: false, x: 0, y: 0 },
+          { id: 2, value: 5, label: '5元', image: 'https://pics5.baidu.com/feed/32fa828ba61ea8d35dccf7c3337b8841271f5888.jpeg@f_auto?token=811248dce2af7edf1be7a22280bd8429', placed: false, x: 0, y: 0 },
+          { id: 3, value: 10, label: '10元', image: 'https://pics5.baidu.com/feed/9c16fdfaaf51f3de8da77f0e5b5766103b297988.jpeg@f_auto?token=8c8efb7cd85c6dc26249ce6876316f94', placed: false, x: 0, y: 0 },
+          { id: 4, value: 1, label: '1元', image: 'https://pics7.baidu.com/feed/0d338744ebf81a4c3e3cdfa38a3c1a56252da677.jpeg@f_auto?token=f0a0f033da626fc1e829a74f709bb75c', placed: false, x: 0, y: 0 },
+        ]);
+      };
+
+      const getPlacedPosition = (value) => (value / 20) * 100;
+
+      return (
+        <div ref={containerRef} className="relative select-none" onMouseMove={handleDragMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd} onTouchMove={handleDragMove} onTouchEnd={handleDragEnd}>
+          <div className="relative py-12 px-10 mb-8">
+            <div className="relative h-1 bg-gray-800 rounded-full">
+              {Array.from({ length: 21 }, (_, i) => i).map((num) => {
+                const position = (num / 20) * 100;
+                const isHidden = hideNumbers.includes(num);
+                return (
+                  <div key={num} className="absolute transform -translate-x-1/2" style={{ left: `${position}%` }}>
+                    <div className="w-0.5 h-3 bg-gray-800" style={{ marginTop: '-12px' }} />
+                    {!isHidden && <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-sm font-semibold text-gray-700">{num}</div>}
+                  </div>
+                );
+              })}
+              
+              {targetPositions.map((pos) => {
+                const position = (pos / 20) * 100;
+                const isPlaced = items.find(i => i.value === pos)?.placed;
+                return (
+                  <div key={pos} className="absolute transform -translate-x-1/2 -top-16" style={{ left: `${position}%` }}>
+                    <div className={`w-16 h-16 rounded-full border-4 border-dashed transition-all ${isPlaced ? 'border-green-500 bg-green-100' : 'border-amber-400 bg-amber-50'}`} />
+                  </div>
+                );
+              })}
+              
+              {items.filter(i => i.placed).map((item) => (
+                <div key={`placed-${item.id}`} className="absolute transform -translate-x-1/2 -top-16" style={{ left: `${getPlacedPosition(item.value)}%` }}>
+                  <div className="w-16 h-16 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg">
+                    <img 
+                      src={item.image} 
+                      alt={item.label} 
+                      className="w-14 h-14 object-contain"
+                      onLoad={() => console.log('Image loaded successfully:', item.image)}
+                      onError={(e) => {
+                        console.error('Image failed to load:', item.image);
+                        console.error('Error details:', e);
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'block';
+                      }}
+                    />
+                    <div style={{ display: 'none' }} className="text-xl font-bold text-blue-800">
+                      {item.value}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-gray-100 rounded-2xl p-8 mt-16">
+            <div className="flex justify-center gap-4 mb-6 flex-wrap">
+              {items.filter(i => !i.placed).map((item) => (
+                <div
+                  key={item.id}
+                  className={`w-20 h-20 rounded-xl bg-white border-2 border-gray-300 flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing transition-transform ${dragging === item.id ? 'scale-110 opacity-50' : 'hover:scale-105'}`}
+                  style={dragging === item.id ? { position: 'absolute', left: item.x, top: item.y, zIndex: 100 } : {}}
+                  onMouseDown={(e) => handleDragStart(e, item.id)}
+                  onTouchStart={(e) => handleDragStart(e, item.id)}
+                >
+                  <img 
+                    src={item.image} 
+                    alt={item.label} 
+                    className="w-16 h-16 object-contain"
+                    onError={(e) => {
+                      console.error('Image failed to load:', item.image);
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'block';
+                    }}
+                  />
+                  <div style={{ display: 'none' }} className="text-2xl font-bold text-blue-800">
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-center text-gray-600 mb-4">把钱币拖到数轴正确的位置</p>
+            <div className="flex justify-center">
+              <button onClick={reset} className="px-8 py-3 bg-amber-500 text-white font-semibold rounded-full hover:bg-amber-600 transition-colors shadow-lg">重新开始</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 界面5 - 比较大小（输入我的钱和物品价格）
+    function View5Compare() {
+      const [myMoney, setMyMoney] = useState('');
+      const [itemPrice, setItemPrice] = useState('');
+      const [showResult, setShowResult] = useState(false);
+
+      const handleCompare = () => {
+        const money = parseFloat(myMoney);
+        const price = parseFloat(itemPrice);
+        if (!isNaN(money) && !isNaN(price) && money >= 0 && money <= 20 && price >= 0 && price <= 20) {
+          setShowResult(true);
+        }
+      };
+
+      const handleReset = () => {
+        setMyMoney('');
+        setItemPrice('');
+        setShowResult(false);
+      };
+
+      const moneyNum = parseFloat(myMoney);
+      const priceNum = parseFloat(itemPrice);
+      const highlightNumbers = showResult ? [moneyNum, priceNum].filter(n => !isNaN(n)) : [];
+      // 红色箭头表示我的钱，黑色箭头表示物品价格
+      const arrowColors = {};
+      if (showResult && !isNaN(moneyNum)) arrowColors[moneyNum] = '#ef4444';
+      if (showResult && !isNaN(priceNum)) arrowColors[priceNum] = '#1f2937';
+
+      const getCompareResult = () => {
+        if (!showResult || isNaN(moneyNum) || isNaN(priceNum)) return null;
+        if (moneyNum > priceNum) return { text: '买得起！', color: 'text-green-600', bg: 'bg-green-50 border-green-200' };
+        if (moneyNum < priceNum) return { text: '钱不够！', color: 'text-red-600', bg: 'bg-red-50 border-red-200' };
+        return { text: '刚好够！', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' };
+      };
+
+      const result = getCompareResult();
+
+      return (
+        <div className="py-8">
+          <p className="text-center text-gray-600 mb-8">
+            输入我的钱和物品价格，在数轴上比较大小
+          </p>
+          
+          <div className="flex justify-center gap-8 mb-8">
+            <div className="border-2 border-red-500 rounded-xl p-6 w-48">
+              <p className="text-center text-red-600 font-bold mb-2">我的钱</p>
+              <input
+                type="text"
+                inputMode="decimal"
+                pattern="^\\d+(\\.\\d)?$"
+                value={myMoney}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue > 20) {
+                    value = '20';
+                  }
+                  setMyMoney(value); 
+                  setShowResult(false); 
+                }}
+                placeholder="0-20"
+                className="w-full text-center text-3xl font-bold border-none outline-none text-red-600"
+              />
+            </div>
+            <div className="border-2 border-gray-800 rounded-xl p-6 w-48">
+              <p className="text-center text-gray-800 font-bold mb-2">物品价格</p>
+              <input
+                type="text"
+                inputMode="decimal"
+                pattern="^\\d+(\\.\\d)?$"
+                value={itemPrice}
+                onChange={(e) => {
+                  let value = e.target.value;
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue > 20) {
+                    value = '20';
+                  }
+                  setItemPrice(value); 
+                  setShowResult(false); 
+                }}
+                placeholder="0-20"
+                className="w-full text-center text-3xl font-bold border-none outline-none text-gray-800"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-4 mb-12">
+            <button onClick={handleCompare} className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">比较</button>
+            <button onClick={handleReset} className="px-8 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">重置</button>
+          </div>
+
+          <NumberLine highlightNumbers={[]} showArrows={showResult} arrowColors={arrowColors} />
+        </div>
+      );
+    }
+
+    // 数轴模块
+    function NumberLineModule() {
+      const [activeView, setActiveView] = useState(1);
+      const views = [
+        { id: 1, name: '基础数轴', component: View1Basic },
+        { id: 2, name: '拖拽练习', component: View2Drag },
+        { id: 3, name: '感受大小', component: View3Size },
+        { id: 4, name: '钱币对应', component: View4Money },
+        { id: 5, name: '比较大小', component: View5Compare },
+      ];
+      const ActiveComponent = views.find(v => v.id === activeView)?.component || View1Basic;
+
+      return (
+        <div>
+          <div className="flex justify-center gap-2 mb-8">
+            {views.map((view) => (
+              <button
+                key={view.id}
+                onClick={() => setActiveView(view.id)}
+                className={`w-12 h-12 rounded-full font-bold text-lg transition-all ${activeView === view.id ? 'bg-blue-600 text-white shadow-lg scale-110' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+              >
+                {view.id}
+              </button>
+            ))}
+          </div>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">{views.find(v => v.id === activeView)?.name}</h2>
+          </div>
+          <div className="min-h-[400px]">
+            <ActiveComponent />
+          </div>
+        </div>
+      );
+    }
+
+    // 小数放大镜模块
+    function DecimalModule() {
+      const [inputValue, setInputValue] = useState('');
+      const [price, setPrice] = useState(null);
+
+      const handleSubmit = () => {
+        const num = parseFloat(inputValue);
+        if (!isNaN(num) && num >= 0 && num <= 20) {
+          setPrice(num);
+        }
+      };
+
+      const handleReset = () => {
+        setInputValue('');
+        setPrice(null);
+      };
+
+      const getZoomRange = (value) => {
+        const floor = Math.floor(value);
+        return { start: floor, end: floor + 1 };
+      };
+
+      const zoomRange = price !== null && !Number.isInteger(price) ? getZoomRange(price) : null;
+
+      return (
+        <div className="py-8">
+          <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">小数放大镜</h2>
+          <p className="text-center text-gray-600 mb-8">输入一个物品价格（0-20之间的小数），观察它在数轴上的位置</p>
+
+          <div className="flex justify-center gap-4 mb-8">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="例如: 3.5"
+              className="px-4 py-3 border-2 border-gray-300 rounded-lg text-lg w-40 text-center focus:border-purple-500 focus:outline-none"
+            />
+            <button onClick={handleSubmit} className="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition-colors">确定</button>
+            <button onClick={handleReset} className="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">重置</button>
+          </div>
+
+
+          <div className="relative">
+            {price !== null && zoomRange && (
+              < div className="relative mb-12 flex justify-center" id="zoom-container">
+                {/* 矩形放大背景 */}
+                <div className=" w-64 h-24 bg-white rounded-2xl shadow-2xl overflow-hidden" style={{ boxShadow: '0 10px 25px rgba(0,0,0,0.15), 0 6px 10px rgba(0,0,0,0.1)' }}>
+                  {/* 放大的数轴 - 只显示3-4区间 */}
+                  <div className="relative py-12 px-12">
+                    <div className="relative h-1 bg-purple-600 rounded-full">
+                      {Array.from({ length: 11 }, (_, i) => i).map((i) => {
+                        const value = zoomRange.start + i * 0.1;
+                        const position = (i / 10) * 100;
+                        const isMainTick = i === 0 || i === 10; // 只在两端显示数字
+                        const isTarget = (price % 0.1 === 0 && Math.abs(value - price) < 0.05) || 
+                       (price % 0.1 !== 0 && Math.floor(price * 10) / 10 === value);
+
+                        return (
+                          <div key={i} className="absolute transform -translate-x-1/2" style={{ left: `${position}%` }}>
+                            <div className={`w-0.5 ${isTarget ? 'bg-red-500 h-6' : isMainTick ? 'bg-purple-800 h-4' : 'bg-purple-400 h-3'}`} style={{ marginTop: '-12px' }} />
+                            {/* 只在两端显示数字 */}
+                            {isMainTick && (
+                              <div className={`absolute top-2 left-1/2 transform -translate-x-1/2 text-sm font-bold text-purple-800`}>
+                                {value.toFixed(0)}
+                              </div>
+                            )}
+
+                            {isTarget && (
+                              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2">
+                                <svg width="20" height="24" viewBox="0 0 20 24" className="overflow-visible">
+                                  <defs>
+                                    <marker 
+                                      id="magnifier-arrowhead" 
+                                      markerWidth="8" 
+                                      markerHeight="6" 
+                                      refX="4" 
+                                      refY="3" 
+                                      orient="auto"
+                                    >
+                                      <polygon points="0 0, 8 3, 0 6" fill="#000000" />
+                                    </marker>
+                                  </defs>
+                                  <line 
+                                    x1="10" 
+                                    y1="0" 
+                                    x2="10" 
+                                    y2="18" 
+                                    stroke="#000000" 
+                                    strokeWidth="2" 
+                                    markerEnd="url(#magnifier-arrowhead)"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            
+            <div className="relative py-12 px-10 mb-8" id="scale-container">
+              {/* 动态连接线 - 从刻度位置指向放大镜底部中心 */}
+              {price !== null && zoomRange && (() => {
+                const pricePosition = (price / 20) * 100; // 价格在刻度上的位置百分比
+                const centerPosition = 50; // 放大镜中心位置百分比
+                const lineHeight = 66; // 连接线的垂直高度（像素）
+                
+                return (
+                  <svg 
+                    className="absolute pointer-events-none" 
+                    style={{ 
+                      height: `${lineHeight}px`, 
+                      top: `-40px`,
+                      left: '2.5rem',
+                      right: '2.5rem',
+                      width: 'calc(100% - 5rem)',
+                      overflow: 'visible'
+                    }}
+                  >
+                    <defs>
+                      <marker 
+                        id="arrowhead" 
+                        markerWidth="10" 
+                        markerHeight="7" 
+                        refX="9" 
+                        refY="3.5" 
+                        orient="auto"
+                      >
+                        <polygon points="0 0, 10 3.5, 0 7" fill="#000000" />
+                      </marker>
+                    </defs>
+                    <line 
+                      x1={`${pricePosition}%`}
+                      y1={`${lineHeight}`}
+                      x2={`${centerPosition}%`}
+                      y2="0"
+                      stroke="#000000"
+                      strokeWidth="2"
+                      markerEnd="url(#arrowhead)"
+                    />
+                  </svg>
+                );
+              })()}
+              <div className="relative h-1 bg-gray-800 rounded-full">
+                {Array.from({ length: 21 }, (_, i) => i).map((num) => {
+                  const position = (num / 20) * 100;
+                  const isInZoomRange = zoomRange && (num === zoomRange.start || num === zoomRange.end);
+                  const isHighlighted = price !== null && num === Math.floor(price);
+                  return (
+                    <div key={num} className="absolute transform -translate-x-1/2" style={{ left: `${position}%` }}>
+                      <div className={`w-0.5 h-3 ${isInZoomRange ? 'bg-purple-600' : isHighlighted ? 'bg-purple-600' : 'bg-gray-800'}`} style={{ marginTop: '-12px' }} />
+                      <div className={`absolute top-2 left-1/2 transform -translate-x-1/2 text-sm font-semibold ${isInZoomRange ? 'text-purple-600' : isHighlighted ? 'text-purple-600' : 'text-gray-700'}`}>{num}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 主应用
+    function App() {
+      const [activeModule, setActiveModule] = useState('numberline');
+
+      return (
+        <div className="min-h-screen p-8">
+          <div className="max-w-6xl mx-auto">
+            <h1 className="text-4xl font-bold text-white text-center mb-8">数学教学工具</h1>
+            
+            <div className="flex justify-center gap-4 mb-8">
+              <button
+                onClick={() => setActiveModule('numberline')}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${activeModule === 'numberline' ? 'bg-white text-purple-600 shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
+              >
+                数轴
+              </button>
+              <button
+                onClick={() => setActiveModule('decimal')}
+                className={`px-6 py-3 rounded-lg font-semibold transition-all ${activeModule === 'decimal' ? 'bg-white text-purple-600 shadow-lg' : 'bg-white/20 text-white hover:bg-white/30'}`}
+              >
+                小数放大镜
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-2xl p-8">
+              {activeModule === 'numberline' ? <NumberLineModule /> : <DecimalModule />}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 渲染应用
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
