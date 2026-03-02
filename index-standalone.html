@@ -423,10 +423,10 @@
     function View4Money() {
       const containerRef = useRef(null);
       const [items, setItems] = useState([
-        { id: 1, value: 20, label: '20元', image: 'https://pics1.baidu.com/feed/b03533fa828ba61e8f412a59f1d0941a314e5909.jpeg@f_auto?token=16c297c362431fb247ac7e99b13b2081', placed: false, x: 0, y: 0 },
-        { id: 2, value: 5, label: '5元', image: 'https://pics5.baidu.com/feed/32fa828ba61ea8d35dccf7c3337b8841271f5888.jpeg@f_auto?token=811248dce2af7edf1be7a22280bd8429', placed: false, x: 0, y: 0 },
-        { id: 3, value: 10, label: '10元', image: 'https://pics5.baidu.com/feed/9c16fdfaaf51f3de8da77f0e5b5766103b297988.jpeg@f_auto?token=8c8efb7cd85c6dc26249ce6876316f94', placed: false, x: 0, y: 0 },
-        { id: 4, value: 1, label: '1元', image: 'https://pics7.baidu.com/feed/0d338744ebf81a4c3e3cdfa38a3c1a56252da677.jpeg@f_auto?token=f0a0f033da626fc1e829a74f709bb75c', placed: false, x: 0, y: 0 },
+        { id: 1, value: 20, label: '20元', image: './assets/20.png', placed: false, x: 0, y: 0 },
+        { id: 2, value: 5, label: '5元', image: './assets/5.png', placed: false, x: 0, y: 0 },
+        { id: 3, value: 10, label: '10元', image: './assets/10.png', placed: false, x: 0, y: 0 },
+        { id: 4, value: 1, label: '1元', image: './assets/1.png', placed: false, x: 0, y: 0 },
       ]);
       const [dragging, setDragging] = useState(null);
       const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -475,10 +475,10 @@
 
       const reset = () => {
         setItems([
-          { id: 1, value: 20, label: '20元', image: 'https://pics1.baidu.com/feed/b03533fa828ba61e8f412a59f1d0941a314e5909.jpeg@f_auto?token=16c297c362431fb247ac7e99b13b2081', placed: false, x: 0, y: 0 },
-          { id: 2, value: 5, label: '5元', image: 'https://pics5.baidu.com/feed/32fa828ba61ea8d35dccf7c3337b8841271f5888.jpeg@f_auto?token=811248dce2af7edf1be7a22280bd8429', placed: false, x: 0, y: 0 },
-          { id: 3, value: 10, label: '10元', image: 'https://pics5.baidu.com/feed/9c16fdfaaf51f3de8da77f0e5b5766103b297988.jpeg@f_auto?token=8c8efb7cd85c6dc26249ce6876316f94', placed: false, x: 0, y: 0 },
-          { id: 4, value: 1, label: '1元', image: 'https://pics7.baidu.com/feed/0d338744ebf81a4c3e3cdfa38a3c1a56252da677.jpeg@f_auto?token=f0a0f033da626fc1e829a74f709bb75c', placed: false, x: 0, y: 0 },
+          { id: 1, value: 20, label: '20元', image: './assets/20.png', placed: false, x: 0, y: 0 },
+          { id: 2, value: 5, label: '5元', image: './assets/5.png', placed: false, x: 0, y: 0 },
+          { id: 3, value: 10, label: '10元', image: './assets/10.png', placed: false, x: 0, y: 0 },
+          { id: 4, value: 1, label: '1元', image: './assets/1.png', placed: false, x: 0, y: 0 },
         ]);
       };
 
@@ -527,6 +527,10 @@
                     <div style={{ display: 'none' }} className="text-xl font-bold text-blue-800">
                       {item.value}
                     </div>
+                  </div>
+                  {/* Debug info */}
+                  <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 whitespace-nowrap">
+                    {item.label} - {item.image}
                   </div>
                 </div>
               ))}
