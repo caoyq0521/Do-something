@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>购物钱数比较 · 整数与小数</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: "Microsoft YaHei", sans-serif; background-color: #f9fafb; }
+
+        /* 数轴容器 */
+        .number-line-container {
+            position: relative;
+            width: 100%;
+            margin: 80px 0 40px 0;
+            box-sizing: border-box;
+            height: 100px;
+            user-select: none; /* 防止点击时选中文本 */
+        }
+
+        /* 数轴线 */
+        .number-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 4px;
+            background-color: #000;
+            width: 100%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        /* 刻度 */
+        .tick {
+            position: absolute;
+            top: -10px;
+            width: 2px;
+            height: 12px;
+            background-color: #000;
+            transform: translateX(-50%);
+        }
+
+        /* 数字标签 */
+        .tick-label {
+            position: absolute;
+            top: 15px;
+            transform: translateX(-50%);
+            font-size: 16px;
+            font-weight: 500;
+            color: #000;
+            white-space: nowrap;
+        }
+        .tick-label.red { color: #f00; font-weight: bold; }
+
+        /* 箭头样式 (垂直向下) */
+        .arrow {
+            position: absolute;
+            bottom: 50%;
+            transform: translateX(-50%);
+            height: 34px;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .arrow-head {
+            width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 10px solid currentColor;
+            line-height: 0; font-size: 0;
+        }
+        .arrow-shaft {
+            width: 3px; height: 24px;
+            margin-bottom: -1px;
+        }
+        .arrow-red {
+          height: 45px;
+        }
+        .arrow-red .arrow-shaft { background-color: #ef4444; height: 40px;}
+        .arrow-red .arrow-head { border-top-color: #ef4444; }
+        .arrow-black .arrow-shaft { background-color: #000; }
+        .arrow-black .arrow-head { border-top-color: #000; }
+
+        /* 通用组件样式 */
+        .step-container { display: none; }
+        .step-container.active { display: block; }
+        .feedback { transition: all 0.3s ease; height: 28px; line-height: 28px; font-size: 18px; font-weight: bold; }
+        .step-title { font-size: 24px; font-weight: bold; color: #1f2937; margin-bottom: 30px; }
+        .input-label { font-size: 20px; font-weight: bold; margin-bottom: 10px; display: block; }
+        .custom-input { font-size: 22px; padding: 12px; text-align: center; border-width: 2px; }
+        .info-box { padding: 20px; border-radius: 6px; text-align: center; }
+        .info-box .label { font-size: 22px; font-weight: bold; margin-bottom: 10px; }
+        .info-box .value { font-size: 26px; font-weight: bold; }
+        .money-value { color: #f00; }
+        .btn-group { margin-top: 30px; display: flex; justify-content: center; gap: 20px; }
+        .result-text { font-size: 24px; font-weight: bold; margin: 30px 0; min-height: 40px; }
+        .calc-row { display: flex; align-items: center; gap: 10px; justify-content: center; }
+        .calc-symbol { font-size: 24px; font-weight: bold; color: #333; }
+        
+        /* 红色圆圈样式 */
+        .red-circle {
+            position: absolute;
+            border: 3px solid #ef4444;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 15;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+        }
+
+        /* 标签页样式 */
+        .tab-btn { flex: 1; py: 5; text-center; font-medium; transition-colors; text-xl; cursor: pointer; }
+        .tab-btn.active { color: #2563eb; border-bottom: 3px solid #2563eb; }
+        .tab-btn.inactive { color: #6b7280; border-bottom: 3px solid transparent; }
+        .tab-btn.inactive:hover { color: #374151; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8">
+    <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8 md:p-10">
+        <!-- 阶段选择导航 -->
+        <div class="flex border-b border-gray-200 mb-10 overflow-x-auto">
+            <button id="tab1" class="tab-btn active" onclick="switchStage(1)">阶段1：整数单物品</button>
+            <button id="tab2" class="tab-btn inactive" onclick="switchStage(2)">阶段2：整数双物品</button>
+            <button id="tab3" class="tab-btn inactive" onclick="switchStage(3)">阶段3：小数单物品</button>
+            <button id="tab4" class="tab-btn inactive" onclick="switchStage(4)">阶段4：小数双物品</button>
+        </div>
+
+        <!-- ================= 阶段1：整数单物品 ================= -->
+        <div id="stage1" class="stage-content">
+            <div id="s1-step1" class="step-container active">
+                <h2 class="step-title">阶段1 - 步骤1：输入物品价格 (整数)</h2>
+                <div class="max-w-md mx-auto">
+                    <label class="input-label text-gray-800">物品价格 (0~20)</label>
+                    <input type="number" id="s1-price" min="0" max="20" step="1" class="custom-input w-full border-2 border-black rounded-lg" placeholder="请输入整数">
+                    <div class="btn-group"><button id="s1-step1-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button></div>
+                </div>
+            </div>
+            <div id="s1-step2" class="step-container">
+                <h2 class="step-title">阶段1 - 步骤2：输入我的钱 (整数)</h2>
+                <div class="max-w-md mx-auto">
+                    <label class="input-label text-red-600">我的钱 (0~20)</label>
+                    <input type="number" id="s1-money" min="0" max="20" step="1" class="custom-input w-full border-2 border-red-600 rounded-lg" placeholder="请输入整数">
+                    <div class="btn-group">
+                        <button id="s1-step2-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                        <button id="s1-step2-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                    </div>
+                </div>
+            </div>
+            <div id="s1-step3" class="step-container">
+                <h2 class="step-title">阶段1 - 步骤3：在数轴上点击对应位置</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s1-money-display" class="value money-value">0</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品价格</p><p id="s1-price-display" class="value">0</p></div>
+                </div>
+                <div class="text-center mb-6 text-lg">请先点击【我的钱】对应的数字，再点击【物品价格】对应的数字</div>
+                <div id="s1-number-line" class="number-line-container"><div class="number-line"></div></div>
+                <div id="s1-feedback" class="feedback text-center text-red-600"></div>
+                <div class="btn-group">
+                    <button id="s1-step3-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s1-step3-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                </div>
+            </div>
+            <div id="s1-step4" class="step-container">
+                <h2 class="step-title">阶段1 - 步骤4：判断是否够买</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s1-money-final" class="value money-value">0</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品价格</p><p id="s1-price-final" class="value">0</p></div>
+                </div>
+                <div id="s1-number-line-final" class="number-line-container"><div class="number-line"></div></div>
+                <div class="flex justify-center gap-8 mb-10">
+                    <button id="s1-btn-enough" class="px-10 py-4 bg-green-600 text-white rounded-lg text-xl">够买</button>
+                    <button id="s1-btn-not-enough" class="px-10 py-4 bg-red-600 text-white rounded-lg text-xl">不够买</button>
+                </div>
+                <div id="s1-result" class="result-text text-center"></div>
+                <div class="btn-group">
+                    <button id="s1-step4-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s1-restart" class="px-8 py-3 bg-blue-600 text-white rounded-lg">重新开始</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 阶段2：整数双物品 ================= -->
+        <div id="stage2" class="stage-content hidden">
+            <div id="s2-step1" class="step-container active">
+                <h2 class="step-title">阶段2 - 步骤1：输入物品价格 (整数)</h2>
+                <div class="max-w-lg mx-auto">
+                    <div class="calc-row mb-8">
+                        <div class="w-1/4"><label class="input-label">物品1</label><input type="number" id="s2-price1" min="0" max="20" step="1" class="custom-input w-full border-2 border-black rounded-lg"></div>
+                        <div class="calc-symbol">+</div>
+                        <div class="w-1/4"><label class="input-label">物品2</label><input type="number" id="s2-price2" min="0" max="20" step="1" class="custom-input w-full border-2 border-black rounded-lg"></div>
+                        <div class="calc-symbol">=</div>
+                        <div class="w-1/4"><label class="input-label">总价</label><input type="number" id="s2-total" readonly class="custom-input w-full border-2 border-black bg-gray-100 rounded-lg" value="0"></div>
+                    </div>
+                    <div class="btn-group"><button id="s2-step1-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button></div>
+                </div>
+            </div>
+            <div id="s2-step2" class="step-container">
+                <h2 class="step-title">阶段2 - 步骤2：输入我的钱 (整数)</h2>
+                <div class="max-w-md mx-auto">
+                    <label class="input-label text-red-600">我的钱 (0~20)</label>
+                    <input type="number" id="s2-money" min="0" max="20" step="1" class="custom-input w-full border-2 border-red-600 rounded-lg">
+                    <div class="btn-group">
+                        <button id="s2-step2-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                        <button id="s2-step2-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                    </div>
+                </div>
+            </div>
+            <div id="s2-step3" class="step-container">
+                <h2 class="step-title">阶段2 - 步骤3：在数轴上点击对应位置</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s2-money-display" class="value money-value">0</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品总价</p><p id="s2-total-display" class="value">0</p></div>
+                </div>
+                <div class="text-center mb-6 text-lg">请先点击【我的钱】对应的数字，再点击【物品总价】对应的数字</div>
+                <div id="s2-number-line" class="number-line-container"><div class="number-line"></div></div>
+                <div id="s2-feedback" class="feedback text-center text-red-600"></div>
+                <div class="btn-group">
+                    <button id="s2-step3-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s2-step3-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                </div>
+            </div>
+            <div id="s2-step4" class="step-container">
+                <h2 class="step-title">阶段2 - 步骤4：判断是否够买</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s2-money-final" class="value money-value">0</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品总价</p><p id="s2-total-final" class="value">0</p></div>
+                </div>
+                <div id="s2-number-line-final" class="number-line-container"><div class="number-line"></div></div>
+                <div class="flex justify-center gap-8 mb-10">
+                    <button id="s2-btn-enough" class="px-10 py-4 bg-green-600 text-white rounded-lg text-xl">够买</button>
+                    <button id="s2-btn-not-enough" class="px-10 py-4 bg-red-600 text-white rounded-lg text-xl">不够买</button>
+                </div>
+                <div id="s2-result" class="result-text text-center"></div>
+                <div class="btn-group">
+                    <button id="s2-step4-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s2-restart" class="px-8 py-3 bg-blue-600 text-white rounded-lg">重新开始</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 阶段3：小数单物品 ================= -->
+        <div id="stage3" class="stage-content hidden">
+            <div id="s3-step1" class="step-container active">
+                <h2 class="step-title">阶段3 - 步骤1：输入物品价格 (小数)</h2>
+                <div class="max-w-md mx-auto">
+                    <label class="input-label text-gray-800">物品价格 (0.00~20.00)</label>
+                    <input type="number" id="s3-price" min="0" max="20" step="0.01" class="custom-input w-full border-2 border-black rounded-lg" placeholder="例如：3.50">
+                    <div class="btn-group"><button id="s3-step1-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button></div>
+                </div>
+            </div>
+            <div id="s3-step2" class="step-container">
+                <h2 class="step-title">阶段3 - 步骤2：输入我的钱 (小数)</h2>
+                <div class="max-w-md mx-auto">
+                    <label class="input-label text-red-600">我的钱 (0.00~20.00)</label>
+                    <input type="number" id="s3-money" min="0" max="20" step="0.01" class="custom-input w-full border-2 border-red-600 rounded-lg" placeholder="例如：5.00">
+                    <div class="btn-group">
+                        <button id="s3-step2-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                        <button id="s3-step2-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                    </div>
+                </div>
+            </div>
+            <div id="s3-step3" class="step-container">
+                <h2 class="step-title">阶段3 - 步骤3：在数轴上找一找</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s3-money-display" class="value money-value">0.00</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品价格</p><p id="s3-price-display" class="value">0.00</p></div>
+                </div>
+                <div class="text-center mb-6 text-lg">
+                    <span id="s3-instruction-text">请点击【我的钱】和【物品价格】所在的区间</span>
+                    <br><span class="text-sm text-gray-500">(提示：小数请点击其整数部分与下一个整数之间的区域)</span>
+                </div>
+                <div id="s3-number-line" class="number-line-container"><div class="number-line"></div></div>
+                <div id="s3-feedback" class="feedback text-center text-red-600"></div>
+                <div class="btn-group">
+                    <button id="s3-step3-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s3-step3-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                </div>
+            </div>
+            <div id="s3-step4" class="step-container">
+                <h2 class="step-title">阶段3 - 步骤4：判断是否够买</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s3-money-final" class="value money-value">0.00</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品价格</p><p id="s3-price-final" class="value">0.00</p></div>
+                </div>
+                <div id="s3-number-line-final" class="number-line-container"><div class="number-line"></div></div>
+                <div class="flex justify-center gap-8 mb-10">
+                    <button id="s3-btn-enough" class="px-10 py-4 bg-green-600 text-white rounded-lg text-xl">够买</button>
+                    <button id="s3-btn-not-enough" class="px-10 py-4 bg-red-600 text-white rounded-lg text-xl">不够买</button>
+                </div>
+                <div id="s3-result" class="result-text text-center"></div>
+                <div class="btn-group">
+                    <button id="s3-step4-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s3-restart" class="px-8 py-3 bg-blue-600 text-white rounded-lg">重新开始</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= 阶段4：小数双物品 ================= -->
+        <div id="stage4" class="stage-content hidden">
+            <div id="s4-step1" class="step-container active">
+                <h2 class="step-title">阶段4 - 步骤1：输入物品价格 (小数)</h2>
+                <div class="max-w-lg mx-auto">
+                    <div class="calc-row mb-8">
+                        <div class="w-1/4"><label class="input-label">物品1</label><input type="number" id="s4-price1" min="0" max="20" step="0.01" class="custom-input w-full border-2 border-black rounded-lg"></div>
+                        <div class="calc-symbol">+</div>
+                        <div class="w-1/4"><label class="input-label">物品2</label><input type="number" id="s4-price2" min="0" max="20" step="0.01" class="custom-input w-full border-2 border-black rounded-lg"></div>
+                        <div class="calc-symbol">=</div>
+                        <div class="w-1/4"><label class="input-label">总价</label><input type="number" id="s4-total" readonly class="custom-input w-full border-2 border-black bg-gray-100 rounded-lg" value="0.00"></div>
+                    </div>
+                    <div class="btn-group"><button id="s4-step1-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button></div>
+                </div>
+            </div>
+            <div id="s4-step2" class="step-container">
+                <h2 class="step-title">阶段4 - 步骤2：输入我的钱 (小数)</h2>
+                <div class="max-w-md mx-auto">
+                    <label class="input-label text-red-600">我的钱 (0.00~20.00)</label>
+                    <input type="number" id="s4-money" min="0" max="20" step="0.01" class="custom-input w-full border-2 border-red-600 rounded-lg">
+                    <div class="btn-group">
+                        <button id="s4-step2-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                        <button id="s4-step2-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                    </div>
+                </div>
+            </div>
+            <div id="s4-step3" class="step-container">
+                <h2 class="step-title">阶段4 - 步骤3：在数轴上找一找</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s4-money-display" class="value money-value">0.00</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品总价</p><p id="s4-total-display" class="value">0.00</p></div>
+                </div>
+                <div class="text-center mb-6 text-lg">
+                    <span id="s4-instruction-text">请点击【我的钱】和【物品总价】所在的区间</span>
+                    <br><span class="text-sm text-gray-500">(提示：小数请点击其整数部分与下一个整数之间的区域)</span>
+                </div>
+                <div id="s4-number-line" class="number-line-container"><div class="number-line"></div></div>
+                <div id="s4-feedback" class="feedback text-center text-red-600"></div>
+                <div class="btn-group">
+                    <button id="s4-step3-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s4-step3-next" class="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50" disabled>下一步</button>
+                </div>
+            </div>
+            <div id="s4-step4" class="step-container">
+                <h2 class="step-title">阶段4 - 步骤4：判断是否够买</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-3xl mx-auto">
+                    <div class="info-box border-2 border-red-600"><p class="label text-red-600">我的钱</p><p id="s4-money-final" class="value money-value">0.00</p></div>
+                    <div class="info-box border-2 border-black"><p class="label text-gray-800">物品总价</p><p id="s4-total-final" class="value">0.00</p></div>
+                </div>
+                <div id="s4-number-line-final" class="number-line-container"><div class="number-line"></div></div>
+                <div class="flex justify-center gap-8 mb-10">
+                    <button id="s4-btn-enough" class="px-10 py-4 bg-green-600 text-white rounded-lg text-xl">够买</button>
+                    <button id="s4-btn-not-enough" class="px-10 py-4 bg-red-600 text-white rounded-lg text-xl">不够买</button>
+                </div>
+                <div id="s4-result" class="result-text text-center"></div>
+                <div class="btn-group">
+                    <button id="s4-step4-prev" class="px-6 py-3 bg-gray-500 text-white rounded-lg">上一步</button>
+                    <button id="s4-restart" class="px-8 py-3 bg-blue-600 text-white rounded-lg">重新开始</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局状态管理
+        const stages = {
+            1: { price: 0, money: 0, moneyClicked: false, priceClicked: false, isDecimal: false },
+            2: { price1: 0, price2: 0, total: 0, money: 0, moneyClicked: false, totalClicked: false, isDecimal: false },
+            3: { price: 0, money: 0, moneyClicked: false, priceClicked: false, isDecimal: true },
+            4: { price1: 0, price2: 0, total: 0, money: 0, moneyClicked: false, totalClicked: false, isDecimal: true }
+        };
+        let currentStageId = 1;
+
+        // 切换阶段
+        function switchStage(id) {
+            currentStageId = id;
+            // 更新标签样式
+            document.querySelectorAll('.tab-btn').forEach((btn, index) => {
+                if (index + 1 === id) {
+                    btn.classList.add('active');
+                    btn.classList.remove('inactive');
+                } else {
+                    btn.classList.remove('active');
+                    btn.classList.add('inactive');
+                }
+            });
+            // 切换内容显示
+            document.querySelectorAll('.stage-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`stage${id}`).classList.remove('hidden');
+            
+            // 重置当前阶段到第一步
+            resetStage(id);
+        }
+
+        function resetStage(id) {
+            const s = stages[id];
+            // 重置数据
+            if (id === 1 || id === 3) {
+                s.price = 0; s.money = 0; s.moneyClicked = false; s.priceClicked = false;
+                document.getElementById(`s${id}-price`).value = '';
+                document.getElementById(`s${id}-money`).value = '';
+                document.getElementById(`s${id}-step1-next`).disabled = true;
+            } else {
+                s.price1 = 0; s.price2 = 0; s.total = 0; s.money = 0; s.moneyClicked = false; s.totalClicked = false;
+                document.getElementById(`s${id}-price1`).value = '';
+                document.getElementById(`s${id}-price2`).value = '';
+                document.getElementById(`s${id}-total`).value = id === 2 ? '0' : '0.00';
+                document.getElementById(`s${id}-money`).value = '';
+                document.getElementById(`s${id}-step1-next`).disabled = true;
+            }
+            // 隐藏所有步骤，显示第一步
+            document.querySelectorAll(`#stage${id} .step-container`).forEach(el => el.classList.remove('active'));
+            document.getElementById(`s${id}-step1`).classList.add('active');
+            // 清空反馈
+            document.getElementById(`s${id}-feedback`).textContent = '';
+            document.getElementById(`s${id}-result`).textContent = '';
+            
+            // 清除所有红色圆圈和箭头
+            ['number-line', 'number-line-final'].forEach(lineId => {
+                const container = document.getElementById(`s${id}-${lineId}`);
+                if (container) {
+                    container.querySelectorAll('.red-circle').forEach(el => el.remove());
+                    container.querySelectorAll('.arrow-red, .arrow-black').forEach(el => el.remove());
+                }
+            });
+        }
+
+        // 初始化数轴 (0-20)
+        function initNumberLine(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const line = container.querySelector('.number-line');
+            if (!line) return;
+            line.innerHTML = '';
+            for (let i = 0; i <= 20; i++) {
+                const percent = (i / 20) * 100;
+                const tick = document.createElement('div');
+                tick.className = 'tick';
+                tick.style.left = `${percent}%`;
+                line.appendChild(tick);
+                const label = document.createElement('div');
+                label.className = `tick-label ${[5,10,20].includes(i) ? 'red' : ''}`;
+                label.style.left = `${percent}%`;
+                label.textContent = i;
+                line.appendChild(label);
+            }
+        }
+
+        // 创建红色圆圈
+        function createRedCircle(containerId, value) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const numberLine = container.querySelector('.number-line');
+            if (!numberLine) return;
+            
+            // 移除旧圆圈
+            numberLine.querySelectorAll('.red-circle').forEach(el => el.remove());
+            
+            // 找到对应数字的tick-label元素
+            const tickLabels = numberLine.querySelectorAll('.tick-label');
+            let targetLabel = null;
+            
+            if (stages[currentStageId].isDecimal) {
+                // 小数情况：找到最接近的整数标签
+                const nearestInt = Math.round(value);
+                tickLabels.forEach(label => {
+                    const labelValue = parseFloat(label.textContent);
+                    if (labelValue === nearestInt) {
+                        targetLabel = label;
+                    }
+                });
+            } else {
+                // 整数情况：找到精确匹配的标签
+                tickLabels.forEach(label => {
+                    const labelValue = parseFloat(label.textContent);
+                    if (labelValue === value) {
+                        targetLabel = label;
+                    }
+                });
+            }
+            
+            if (targetLabel) {
+                // 创建圆圈
+                const circle = document.createElement('div');
+                circle.className = 'red-circle';
+                
+                // 直接使用数字标签的left和top位置
+                // 因为圆圈已经有transform: translate(-50%, -50%)，所以会自动居中
+                circle.style.left = targetLabel.style.left;
+                circle.style.top = '25px'; // 数字标签的top位置
+                
+                numberLine.appendChild(circle);
+            }
+        }
+
+        // 创建箭头
+        function createArrow(containerId, value, type) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const line = container.querySelector('.number-line');
+            if (!line) return;
+            
+            // 移除旧箭头
+            container.querySelectorAll(`.arrow-${type}`).forEach(el => el.remove());
+
+            let percent;
+            if (stages[currentStageId].isDecimal) {
+                // 小数模式：箭头指向数值本身的位置 (例如 3.5 就在 3 和 4 中间)
+                percent = (value / 20) * 100;
+            } else {
+                // 整数模式：箭头指向刻度
+                percent = (value / 20) * 100;
+            }
+            
+            // 边界保护
+            if (percent < 0) percent = 0;
+            if (percent > 100) percent = 100;
+
+            const arrow = document.createElement('div');
+            arrow.className = `arrow arrow-${type}`;
+            arrow.style.left = `${percent}%`;
+            
+            const head = document.createElement('div'); head.className = 'arrow-head';
+            const shaft = document.createElement('div'); shaft.className = 'arrow-shaft';
+            arrow.appendChild(head);
+            arrow.appendChild(shaft);
+            line.appendChild(arrow);
+        }
+
+        // 通用：处理数轴点击
+        function handleNumberLineClick(stageId, containerId, feedbackId, nextBtnId, targetValue, targetType) {
+            const container = document.getElementById(containerId);
+            const feedback = document.getElementById(feedbackId);
+            const nextBtn = document.getElementById(nextBtnId);
+            const data = stages[stageId];
+            const isDecimal = data.isDecimal;
+
+            container.addEventListener('click', function(e) {
+                if ((data.moneyClicked && data.priceClicked) || (data.moneyClicked && data.totalClicked)) return;
+
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                let percent = x / rect.width;
+                if (percent < 0) percent = 0;
+                if (percent > 1) percent = 1;
+                
+                // 计算点击对应的数值 (0-20)
+                const clickedValue = percent * 20;
+
+                let isCorrect = false;
+
+                if (isDecimal) {
+                    // 小数逻辑：点击区间 [floor(value), ceil(value)]
+                    // 例如 3.50，点击 3.0 到 4.0 之间都算对
+                    const lower = Math.floor(targetValue);
+                    const upper = Math.ceil(targetValue);
+                    // 允许一点点误差，或者严格区间
+                    if (clickedValue >= lower && clickedValue <= upper) {
+                        isCorrect = true;
+                    }
+                } else {
+                    // 整数逻辑：四舍五入匹配
+                    const roundedClick = Math.round(clickedValue);
+                    if (roundedClick === targetValue) {
+                        isCorrect = true;
+                    }
+                }
+
+                // 判断是点击“我的钱”还是“价格/总价”
+                const isMoneyTurn = !data.moneyClicked;
+                const expectedValue = isMoneyTurn ? data.money : (data.price || data.total);
+                const expectedType = isMoneyTurn ? 'money' : (data.price !== undefined ? 'price' : 'total');
+
+                if (isCorrect && clickedValue >= (Math.floor(expectedValue)) && clickedValue <= (Math.ceil(expectedValue))) {
+                    // 再次确认点击的是当前需要点击的目标
+                    // 对于小数，只要落在区间内即可
+                    // 对于整数，必须接近
+                    
+                    let finalCheck = false;
+                    if (isDecimal) {
+                         // 小数：检查点击区间是否匹配当前目标值的区间
+                         const tLower = Math.floor(expectedValue);
+                         const tUpper = Math.ceil(expectedValue);
+                         if (clickedValue >= tLower && clickedValue <= tUpper) finalCheck = true;
+                    } else {
+                         // 整数：检查是否匹配具体数字
+                         if (Math.round(clickedValue) === expectedValue) finalCheck = true;
+                    }
+
+                    if (finalCheck) {
+                        feedback.textContent = '';
+                        const typeClass = isMoneyTurn ? 'red' : 'black';
+                        createArrow(containerId, expectedValue, typeClass);
+                        
+                        if (isMoneyTurn) {
+                            data.moneyClicked = true;
+                        } else {
+                            if (data.price !== undefined) data.priceClicked = true;
+                            if (data.total !== undefined) data.totalClicked = true;
+                            nextBtn.disabled = false;
+                        }
+                    } else {
+                        feedback.textContent = '再想一想';
+                        setTimeout(() => { if(feedback.textContent === '再想一想') feedback.textContent = ''; }, 1000);
+                    }
+                } else {
+                    feedback.textContent = '再想一想';
+                    setTimeout(() => { if(feedback.textContent === '再想一想') feedback.textContent = ''; }, 1000);
+                }
+            });
+        }
+
+        // ================= 阶段1 逻辑 =================
+        const s1PriceIn = document.getElementById('s1-price');
+        const s1Next1 = document.getElementById('s1-step1-next');
+        s1PriceIn.addEventListener('input', () => {
+            const v = parseFloat(s1PriceIn.value);
+            stages[1].price = (!isNaN(v) && v>=0 && v<=20) ? v : 0;
+            s1Next1.disabled = !(stages[1].price > 0 || s1PriceIn.value === '0');
+        });
+        document.getElementById('s1-step1-next').onclick = () => {
+            document.getElementById('s1-step1').classList.remove('active');
+            document.getElementById('s1-step2').classList.add('active');
+        };
+        
+        const s1MoneyIn = document.getElementById('s1-money');
+        const s1Next2 = document.getElementById('s1-step2-next');
+        s1MoneyIn.addEventListener('input', () => {
+            const v = parseFloat(s1MoneyIn.value);
+            stages[1].money = (!isNaN(v) && v>=0 && v<=20) ? v : 0;
+            s1Next2.disabled = !(stages[1].money > 0 || s1MoneyIn.value === '0');
+        });
+        document.getElementById('s1-step2-prev').onclick = () => {
+            document.getElementById('s1-step2').classList.remove('active');
+            document.getElementById('s1-step1').classList.add('active');
+        };
+        document.getElementById('s1-step2-next').onclick = () => {
+            document.getElementById('s1-money-display').textContent = stages[1].money;
+            document.getElementById('s1-price-display').textContent = stages[1].price;
+            stages[1].moneyClicked = false; stages[1].priceClicked = false;
+            initNumberLine('s1-number-line');
+            document.getElementById('s1-step2').classList.remove('active');
+            document.getElementById('s1-step3').classList.add('active');
+        };
+
+        handleNumberLineClick(1, 's1-number-line', 's1-feedback', 's1-step3-next', 0, ''); 
+        // 由于闭包问题，上面的通用函数需要针对每个阶段单独绑定逻辑判断，这里简化处理，直接在事件里写逻辑更稳妥
+        // 重新绑定阶段1点击逻辑
+        document.getElementById('s1-number-line').onclick = function(e) {
+            if (stages[1].moneyClicked && stages[1].priceClicked) return;
+            const rect = this.getBoundingClientRect();
+            const val = Math.round(((e.clientX - rect.left) / rect.width) * 20);
+            const fb = document.getElementById('s1-feedback');
+            
+            if (!stages[1].moneyClicked) {
+                if (val === stages[1].money) {
+                    createArrow('s1-number-line', val, 'red');
+                    createRedCircle('s1-number-line', val);
+                    stages[1].moneyClicked = true; fb.textContent = '';
+                } else { fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); }
+            } else if (!stages[1].priceClicked) {
+                if (val === stages[1].price) {
+                    createArrow('s1-number-line', val, 'black');
+                    stages[1].priceClicked = true; fb.textContent = '';
+                    document.getElementById('s1-step3-next').disabled = false;
+                } else { fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); }
+            }
+        };
+
+        document.getElementById('s1-step3-prev').onclick = () => {
+            document.getElementById('s1-step3').classList.remove('active');
+            document.getElementById('s1-step2').classList.add('active');
+        };
+        document.getElementById('s1-step3-next').onclick = () => {
+            document.getElementById('s1-money-final').textContent = stages[1].money;
+            document.getElementById('s1-price-final').textContent = stages[1].price;
+            initNumberLine('s1-number-line-final');
+            createArrow('s1-number-line-final', stages[1].money, 'red');
+            createArrow('s1-number-line-final', stages[1].price, 'black');
+            document.getElementById('s1-step3').classList.remove('active');
+            document.getElementById('s1-step4').classList.add('active');
+        };
+        
+        const checkEnough = (stageId, money, cost, resultId) => {
+            const res = document.getElementById(resultId);
+            const isEnough = money >= cost;
+            // 按钮事件在下方统一绑定逻辑较复杂，这里为阶段1硬编码
+            const btnEnough = document.getElementById(`s${stageId}-btn-enough`);
+            const btnNot = document.getElementById(`s${stageId}-btn-not-enough`);
+            
+            btnEnough.onclick = () => {
+                res.innerHTML = isEnough ? '<span class="text-green-600">✓ 你真棒</span>' : '<span class="text-red-600">✗ 看看数轴再想想</span>';
+            };
+            btnNot.onclick = () => {
+                res.innerHTML = !isEnough ? '<span class="text-green-600">✓ 你真棒</span>' : '<span class="text-red-600">✗ 看看数轴再想想</span>';
+            };
+        };
+        checkEnough(1, stages[1].money, stages[1].price, 's1-result');
+        // 注意：上面checkEnough在初始化时执行了一次，此时数据可能未最终确定，需要在进入step4时重新绑定或触发
+        // 修正：在 step3->step4 转换时绑定
+        document.getElementById('s1-step3-next').addEventListener('click', function() {
+             checkEnough(1, stages[1].money, stages[1].price, 's1-result');
+        });
+
+
+        document.getElementById('s1-step4-prev').onclick = () => {
+            document.getElementById('s1-step4').classList.remove('active');
+            document.getElementById('s1-step3').classList.add('active');
+        };
+        document.getElementById('s1-restart').onclick = () => resetStage(1);
+
+
+        // ================= 阶段2 逻辑 (简化版，逻辑同1) =================
+        const updateS2Total = () => {
+            const p1 = parseFloat(document.getElementById('s2-price1').value) || 0;
+            const p2 = parseFloat(document.getElementById('s2-price2').value) || 0;
+            stages[2].price1 = p1; stages[2].price2 = p2; stages[2].total = p1 + p2;
+            document.getElementById('s2-total').value = stages[2].total;
+            document.getElementById('s2-step1-next').disabled = (p1+p2 > 20 || (p1===0 && p2===0 && !document.getElementById('s2-price1').value));
+        };
+        ['s2-price1', 's2-price2'].forEach(id => document.getElementById(id).addEventListener('input', updateS2Total));
+        document.getElementById('s2-step1-next').onclick = () => {
+            document.getElementById('s2-step1').classList.remove('active');
+            document.getElementById('s2-step2').classList.add('active');
+        };
+        const s2MoneyIn = document.getElementById('s2-money');
+        s2MoneyIn.addEventListener('input', () => {
+            const v = parseFloat(s2MoneyIn.value);
+            stages[2].money = (!isNaN(v)) ? v : 0;
+            document.getElementById('s2-step2-next').disabled = !(v>=0);
+        });
+        document.getElementById('s2-step2-prev').onclick = () => {
+            document.getElementById('s2-step2').classList.remove('active');
+            document.getElementById('s2-step1').classList.add('active');
+        };
+        document.getElementById('s2-step2-next').onclick = () => {
+            document.getElementById('s2-money-display').textContent = stages[2].money;
+            document.getElementById('s2-total-display').textContent = stages[2].total;
+            stages[2].moneyClicked = false; stages[2].totalClicked = false;
+            initNumberLine('s2-number-line');
+            document.getElementById('s2-step2').classList.remove('active');
+            document.getElementById('s2-step3').classList.add('active');
+        };
+        
+        document.getElementById('s2-number-line').onclick = function(e) {
+            if (stages[2].moneyClicked && stages[2].totalClicked) return;
+            const rect = this.getBoundingClientRect();
+            const val = Math.round(((e.clientX - rect.left) / rect.width) * 20);
+            const fb = document.getElementById('s2-feedback');
+            if (!stages[2].moneyClicked) {
+                if (val === stages[2].money) { 
+                    createArrow('s2-number-line', val, 'red'); 
+                    createRedCircle('s2-number-line', val);
+                    stages[2].moneyClicked = true; fb.textContent=''; 
+                }
+                else { fb.textContent='再想一想'; setTimeout(()=>fb.textContent='', 1000); }
+            } else if (!stages[2].totalClicked) {
+                if (val === stages[2].total) { createArrow('s2-number-line', val, 'black'); stages[2].totalClicked = true; fb.textContent=''; document.getElementById('s2-step3-next').disabled=false; }
+                else { fb.textContent='再想一想'; setTimeout(()=>fb.textContent='', 1000); }
+            }
+        };
+        document.getElementById('s2-step3-prev').onclick = () => { document.getElementById('s2-step3').classList.remove('active'); document.getElementById('s2-step2').classList.add('active'); };
+        document.getElementById('s2-step3-next').onclick = () => {
+            document.getElementById('s2-money-final').textContent = stages[2].money;
+            document.getElementById('s2-total-final').textContent = stages[2].total;
+            initNumberLine('s2-number-line-final');
+            createArrow('s2-number-line-final', stages[2].money, 'red');
+            createArrow('s2-number-line-final', stages[2].total, 'black');
+            document.getElementById('s2-step3').classList.remove('active');
+            document.getElementById('s2-step4').classList.add('active');
+            checkEnough(2, stages[2].money, stages[2].total, 's2-result');
+        };
+        document.getElementById('s2-step4-prev').onclick = () => { document.getElementById('s2-step4').classList.remove('active'); document.getElementById('s2-step3').classList.add('active'); };
+        document.getElementById('s2-restart').onclick = () => resetStage(2);
+
+
+        // ================= 阶段3 逻辑 (小数单物品) =================
+        const s3PriceIn = document.getElementById('s3-price');
+        const s3Next1 = document.getElementById('s3-step1-next');
+        s3PriceIn.addEventListener('input', () => {
+            const v = parseFloat(s3PriceIn.value);
+            stages[3].price = (!isNaN(v) && v>=0 && v<=20) ? v : 0;
+            s3Next1.disabled = !(s3PriceIn.value !== '');
+        });
+        document.getElementById('s3-step1-next').onclick = () => {
+            document.getElementById('s3-step1').classList.remove('active');
+            document.getElementById('s3-step2').classList.add('active');
+        };
+        
+        const s3MoneyIn = document.getElementById('s3-money');
+        const s3Next2 = document.getElementById('s3-step2-next');
+        s3MoneyIn.addEventListener('input', () => {
+            const v = parseFloat(s3MoneyIn.value);
+            stages[3].money = (!isNaN(v) && v>=0 && v<=20) ? v : 0;
+            s3Next2.disabled = !(s3MoneyIn.value !== '');
+        });
+        document.getElementById('s3-step2-prev').onclick = () => {
+            document.getElementById('s3-step2').classList.remove('active');
+            document.getElementById('s3-step1').classList.add('active');
+        };
+        document.getElementById('s3-step2-next').onclick = () => {
+            document.getElementById('s3-money-display').textContent = parseFloat(stages[3].money).toFixed(2);
+            document.getElementById('s3-price-display').textContent = parseFloat(stages[3].price).toFixed(2);
+            stages[3].moneyClicked = false; stages[3].priceClicked = false;
+            initNumberLine('s3-number-line');
+            document.getElementById('s3-step2').classList.remove('active');
+            document.getElementById('s3-step3').classList.add('active');
+        };
+
+        // 阶段3 数轴点击逻辑 (区间判断)
+        document.getElementById('s3-number-line').onclick = function(e) {
+            if (stages[3].moneyClicked && stages[3].priceClicked) return;
+            const rect = this.getBoundingClientRect();
+            const clickVal = ((e.clientX - rect.left) / rect.width) * 20;
+            const fb = document.getElementById('s3-feedback');
+            
+            const checkInterval = (target) => {
+                const lower = Math.floor(target);
+                const upper = Math.ceil(target);
+                return clickVal >= lower && clickVal <= upper;
+            };
+
+            if (!stages[3].moneyClicked) {
+                const moneyValue = stages[3].money;
+                // 检查是否为整数
+                if (moneyValue % 1 === 0) {
+                    // 整数情况：检查是否点击到准确的整数位置
+                    const roundedClick = Math.round(clickVal);
+                    if (roundedClick === moneyValue) {
+                        createArrow('s3-number-line', moneyValue, 'red');
+                        createRedCircle('s3-number-line', moneyValue);
+                        stages[3].moneyClicked = true; fb.textContent = '';
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                } else {
+                    // 小数情况：使用区间判断
+                    if (checkInterval(moneyValue)) {
+                        createArrow('s3-number-line', moneyValue, 'red');
+                        createRedCircle('s3-number-line', moneyValue);
+                        stages[3].moneyClicked = true; fb.textContent = '';
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                }
+            } else if (!stages[3].priceClicked) {
+                const priceValue = stages[3].price;
+                // 检查是否为整数
+                if (priceValue % 1 === 0) {
+                    // 整数情况：检查是否点击到准确的整数位置
+                    const roundedClick = Math.round(clickVal);
+                    if (roundedClick === priceValue) {
+                        createArrow('s3-number-line', priceValue, 'black');
+                        stages[3].priceClicked = true; fb.textContent = '';
+                        document.getElementById('s3-step3-next').disabled = false;
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                } else {
+                    // 小数情况：使用区间判断
+                    if (checkInterval(priceValue)) {
+                        createArrow('s3-number-line', priceValue, 'black');
+                        stages[3].priceClicked = true; fb.textContent = '';
+                        document.getElementById('s3-step3-next').disabled = false;
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                }
+            }
+        };
+
+        document.getElementById('s3-step3-prev').onclick = () => {
+            document.getElementById('s3-step3').classList.remove('active');
+            document.getElementById('s3-step2').classList.add('active');
+        };
+        document.getElementById('s3-step3-next').onclick = () => {
+            document.getElementById('s3-money-final').textContent = parseFloat(stages[3].money).toFixed(2);
+            document.getElementById('s3-price-final').textContent = parseFloat(stages[3].price).toFixed(2);
+            initNumberLine('s3-number-line-final');
+            createArrow('s3-number-line-final', stages[3].money, 'red');
+            createArrow('s3-number-line-final', stages[3].price, 'black');
+            document.getElementById('s3-step3').classList.remove('active');
+            document.getElementById('s3-step4').classList.add('active');
+            checkEnough(3, stages[3].money, stages[3].price, 's3-result');
+        };
+        document.getElementById('s3-step4-prev').onclick = () => { document.getElementById('s3-step4').classList.remove('active'); document.getElementById('s3-step3').classList.add('active'); };
+        document.getElementById('s3-restart').onclick = () => resetStage(3);
+
+
+        // ================= 阶段4 逻辑 (小数双物品) =================
+        const updateS4Total = () => {
+            const p1 = parseFloat(document.getElementById('s4-price1').value) || 0;
+            const p2 = parseFloat(document.getElementById('s4-price2').value) || 0;
+            stages[4].price1 = p1; stages[4].price2 = p2; stages[4].total = p1 + p2;
+            document.getElementById('s4-total').value = stages[4].total.toFixed(2);
+            document.getElementById('s4-step1-next').disabled = !(document.getElementById('s4-price1').value || document.getElementById('s4-price2').value);
+        };
+        ['s4-price1', 's4-price2'].forEach(id => document.getElementById(id).addEventListener('input', updateS4Total));
+        document.getElementById('s4-step1-next').onclick = () => {
+            document.getElementById('s4-step1').classList.remove('active');
+            document.getElementById('s4-step2').classList.add('active');
+        };
+        const s4MoneyIn = document.getElementById('s4-money');
+        s4MoneyIn.addEventListener('input', () => {
+            const v = parseFloat(s4MoneyIn.value);
+            stages[4].money = (!isNaN(v)) ? v : 0;
+            document.getElementById('s4-step2-next').disabled = !(s4MoneyIn.value !== '');
+        });
+        document.getElementById('s4-step2-prev').onclick = () => {
+            document.getElementById('s4-step2').classList.remove('active');
+            document.getElementById('s4-step1').classList.add('active');
+        };
+        document.getElementById('s4-step2-next').onclick = () => {
+            document.getElementById('s4-money-display').textContent = parseFloat(stages[4].money).toFixed(2);
+            document.getElementById('s4-total-display').textContent = parseFloat(stages[4].total).toFixed(2);
+            stages[4].moneyClicked = false; stages[4].totalClicked = false;
+            initNumberLine('s4-number-line');
+            document.getElementById('s4-step2').classList.remove('active');
+            document.getElementById('s4-step3').classList.add('active');
+        };
+
+        // 阶段4 数轴点击逻辑 (区间判断)
+        document.getElementById('s4-number-line').onclick = function(e) {
+            if (stages[4].moneyClicked && stages[4].totalClicked) return;
+            const rect = this.getBoundingClientRect();
+            const clickVal = ((e.clientX - rect.left) / rect.width) * 20;
+            const fb = document.getElementById('s4-feedback');
+            
+            const checkInterval = (target) => {
+                const lower = Math.floor(target);
+                const upper = Math.ceil(target);
+                return clickVal >= lower && clickVal <= upper;
+            };
+
+            if (!stages[4].moneyClicked) {
+                const moneyValue = stages[4].money;
+                // 检查是否为整数
+                if (moneyValue % 1 === 0) {
+                    // 整数情况：检查是否点击到准确的整数位置
+                    const roundedClick = Math.round(clickVal);
+                    if (roundedClick === moneyValue) {
+                        createArrow('s4-number-line', moneyValue, 'red');
+                        createRedCircle('s4-number-line', moneyValue);
+                        stages[4].moneyClicked = true; fb.textContent = '';
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                } else {
+                    // 小数情况：使用区间判断
+                    if (checkInterval(moneyValue)) {
+                        createArrow('s4-number-line', moneyValue, 'red');
+                        createRedCircle('s4-number-line', moneyValue);
+                        stages[4].moneyClicked = true; fb.textContent = '';
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                }
+            } else if (!stages[4].totalClicked) {
+                const totalValue = stages[4].total;
+                // 检查是否为整数
+                if (totalValue % 1 === 0) {
+                    // 整数情况：检查是否点击到准确的整数位置
+                    const roundedClick = Math.round(clickVal);
+                    if (roundedClick === totalValue) {
+                        createArrow('s4-number-line', totalValue, 'black');
+                        stages[4].totalClicked = true; fb.textContent = '';
+                        document.getElementById('s4-step3-next').disabled = false;
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                } else {
+                    // 小数情况：使用区间判断
+                    if (checkInterval(totalValue)) {
+                        createArrow('s4-number-line', totalValue, 'black');
+                        stages[4].totalClicked = true; fb.textContent = '';
+                        document.getElementById('s4-step3-next').disabled = false;
+                    } else { 
+                        fb.textContent = '再想一想'; setTimeout(()=>fb.textContent='', 1000); 
+                    }
+                }
+            }
+        };
+
+        document.getElementById('s4-step3-prev').onclick = () => { document.getElementById('s4-step3').classList.remove('active'); document.getElementById('s4-step2').classList.add('active'); };
+        document.getElementById('s4-step3-next').onclick = () => {
+            document.getElementById('s4-money-final').textContent = parseFloat(stages[4].money).toFixed(2);
+            document.getElementById('s4-total-final').textContent = parseFloat(stages[4].total).toFixed(2);
+            initNumberLine('s4-number-line-final');
+            createArrow('s4-number-line-final', stages[4].money, 'red');
+            createArrow('s4-number-line-final', stages[4].total, 'black');
+            document.getElementById('s4-step3').classList.remove('active');
+            document.getElementById('s4-step4').classList.add('active');
+            checkEnough(4, stages[4].money, stages[4].total, 's4-result');
+        };
+        document.getElementById('s4-step4-prev').onclick = () => { document.getElementById('s4-step4').classList.remove('active'); document.getElementById('s4-step3').classList.add('active'); };
+        document.getElementById('s4-restart').onclick = () => resetStage(4);
+
+        // 初始化
+        initNumberLine('s1-number-line'); initNumberLine('s1-number-line-final');
+        initNumberLine('s2-number-line'); initNumberLine('s2-number-line-final');
+        initNumberLine('s3-number-line'); initNumberLine('s3-number-line-final');
+        initNumberLine('s4-number-line'); initNumberLine('s4-number-line-final');
+    </script>
+</body>
+</html>
