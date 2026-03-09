@@ -24,7 +24,7 @@
     const { useState, useRef } = React;
 
     // 通用数轴组件
-    function NumberLine({ min = 0, max = 20, highlightNumbers = [], showArrows = false, gradientThickness = false, gradientFontSize = false, hideNumbers = [], arrowColors = {}, onNumberClick = null }) {
+    function NumberLine({ min = 0, max = 20, highlightNumbers = [], showArrows = true, gradientThickness = false, gradientFontSize = false, hideNumbers = [], showGradientBelow = false, arrowColors = {}, onNumberClick = null }) {
       const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i);
       
       const getThickness = (num) => {
@@ -58,6 +58,18 @@
       return (
         <div className="relative py-12 px-4">
           <div className="relative h-1 bg-gray-800 rounded-full">
+            {/* 区间高亮 - 绿色覆盖 */}
+            {highlightNumbers.length > 0 && (
+              <div 
+                className="absolute top-0 h-full bg-green-400 rounded-full"
+                style={{
+                  left: '0%',
+                  width: `${Math.max(...highlightNumbers) / 20 * 100}%`,
+                  opacity: 0.6
+                }}
+              />
+            )}
+            
             {gradientThickness && (
               <div 
                 className="absolute inset-0 rounded-full"
@@ -67,11 +79,34 @@
                 }}
               />
             )}
+
+            {/* 2px阴影线，颜色随数字变大而变深，紧挨着数轴下方 */}
+            {showGradientBelow  && <svg className="absolute inset-x-0 top-1.4 w-full h-1" preserveAspectRatio="none" viewBox="0 0 100 2">
+              <defs>
+                <linearGradient id="decimalGreenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#86efac" />
+                  <stop offset="25%" stopColor="#4ade80" />
+                  <stop offset="50%" stopColor="#22c55e" />
+                  <stop offset="75%" stopColor="#16a34a" />
+                  <stop offset="100%" stopColor="#15803d" />
+                </linearGradient>
+              </defs>
+              <rect x="0" y="0" width="100" height="2" fill="url(#decimalGreenGradient)" />
+            </svg>}
+            
+            {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接 */}
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2" style={{ marginRight: '-30px' }}>
+              <svg width="46" height="16" viewBox="0 0 46 16" fill="none">
+                <rect x="0" y="6" width="30" height="4" fill="#374151" />
+                <path d="M46 8L34 0L34 6L30 6L30 10L34 10L34 16L46 8Z" fill="#374151" />
+              </svg>
+            </div>
             
             {numbers.map((num) => {
               const position = ((num - min) / (max - min)) * 100;
               const isHighlighted = highlightNumbers.includes(num);
               const isHidden = hideNumbers.includes(num);
+              const isRedNumber = [1, 5, 10, 20].includes(num);
               
               return (
                 <div
@@ -81,7 +116,7 @@
                 >
                   {/* 刻度线只在上方显示 */}
                   <div 
-                    className={`w-0.5 ${isHighlighted ? 'bg-red-500' : 'bg-gray-800'}`}
+                    className={`w-0.5 ${isRedNumber ? 'bg-red-500' : 'bg-gray-800'}`}
                     style={{ 
                       height: `${12 + getThickness(num)}px`,
                       marginTop: `-${12 + getThickness(num)}px`
@@ -91,7 +126,7 @@
                   {!isHidden && (
                     <div 
                       className={`absolute top-2 left-1/2 transform -translate-x-1/2 font-semibold ${
-                        isHighlighted ? 'text-red-500' : 'text-gray-700'
+                        isRedNumber ? 'text-red-500' : 'text-gray-700'
                       } ${
                         onNumberClick ? 'cursor-pointer hover:scale-110 transition-transform' : ''
                       }`}
@@ -116,14 +151,15 @@
                   className="absolute transform -translate-x-1/2"
                   style={{ left: `${position}%` }}
                 >
-                  <div className="absolute -top-16 left-1/2 transform -translate-x-1/2">
+                  <div className={arrowColor === '#ef4444' ? 'absolute -top-20 left-1/2 transform -translate-x-1/2' : 'absolute -top-16 left-1/2 transform -translate-x-1/2'}>
                     {/* 新箭头样式：竖线+三角形 */}
-                    <svg width="24" height="40" viewBox="0 0 24 40" fill="none">
-                      <rect x="10" y="0" width="4" height="28" fill={arrowColor} />
-                      <path d="M12 40L4 28h16L12 40z" fill={arrowColor} />
+                    <svg width="24" height={arrowColor === '#ef4444' ? '55' : '40'} viewBox={`0 0 24 ${arrowColor === '#ef4444' ? '55' : '40'}`} fill="none">
+                      <rect x="10" y={arrowColor === '#ef4444' ? '0' : '0'} width="4" height={arrowColor === '#ef4444' ? '43' : '28'} fill={arrowColor} />
+                      <path d={`M12 ${arrowColor === '#ef4444' ? '55' : '40'}L4 ${arrowColor === '#ef4444' ? '43' : '28'}h16L12 ${arrowColor === '#ef4444' ? '55' : '40'}z`} fill={arrowColor} />
                     </svg>
                     {/* 竖着写的标签 */}
-                    <div className="absolute -top-4 left-8 transform flex flex-col" style={{ height: '60px' }}>
+                    <div className="absolute -top-4 transform flex flex-col"
+                      style={arrowColor === '#ef4444' ? { left: '-20px', height: '73px', top: 0 } : { left: '28px', height: '60px' }}>
                       {arrowColor === '#ef4444' ? 
                         ['我', '的', '钱'].map((char, i) => (
                           <span key={i} className="text-sm font-bold text-red-500" style={{ lineHeight: '1' }}>
@@ -245,6 +281,14 @@
         >
           <div className="relative py-12 px-10 mb-8">
             <div className="relative h-1 bg-gray-800 rounded-full">
+              {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接，加粗 */}
+              <div className="absolute right-0 top-1/2 transform -translate-y-1/2" style={{ marginRight: '-30px' }}>
+                <svg width="46" height="24" viewBox="0 0 46 24" fill="none">
+                  <rect x="0" y="8" width="30" height="8" fill="#374151" />
+                  <path d="M46 12L34 4L34 8L30 8L30 16L34 16L34 20L46 12Z" fill="#374151" />
+                </svg>
+              </div>
+              
               {Array.from({ length: 21 }, (_, i) => i).map((num) => {
                 const position = (num / 20) * 100;
                 const isHidden = hideNumbers.includes(num);
@@ -262,15 +306,15 @@
                 const isPlaced = items.find(i => i.value === pos)?.placed;
                 return (
                   <div key={pos} className="absolute transform -translate-x-1/2" style={{ left: `${position}%`, top: '30px' }}>
-                    <div className={`w-16 h-10 border-4 ${isPlaced ? 'border-green-500 bg-green-100' : 'border-red-500 bg-red-50'} rounded`} />
+                    <div className={`w-12 h-8 border-4 ${isPlaced ? 'border-green-500 bg-green-100' : 'border-red-500 bg-red-50'} rounded`} />
                   </div>
                 );
               })}
               
               {items.filter(i => i.placed).map((item) => (
                 <div key={`placed-${item.id}`} className="absolute transform -translate-x-1/2" style={{ left: `${getPlacedPosition(item.value)}%`, top: '30px' }}>
-                  <div className="w-16 h-10 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg">
-                    <span className="text-2xl font-bold text-blue-800">{item.value}</span>
+                  <div className="w-12 h-8 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg">
+                    <span className="text-xl font-bold text-blue-800">{item.value}</span>
                   </div>
                 </div>
               ))}
@@ -302,8 +346,104 @@
       );
     }
 
-    // 界面3 - 感受大小（点击数字显示圆片）
-    function View3Size() {
+    // 界面3.1 - 带箭头数轴，绿色渐变阴影，闪烁圆点
+    function View3SizeWithArrows() {
+      const [selectedNumbers, setSelectedNumbers] = useState([]);
+      const [blinkingNumber, setBlinkingNumber] = useState(null);
+      const numbers = Array.from({ length: 21 }, (_, i) => i);
+
+      // 渲染圆片，5个一列
+      const renderDots = (count, blinkingNum) => {
+        if (count === 0) return null;
+        const cols = Math.ceil(count / 5);
+        const dots = [];
+        for (let col = 0; col < cols; col++) {
+          const dotsInCol = Math.min(5, count - col * 5);
+          const colDots = [];
+          for (let row = 0; row < dotsInCol; row++) {
+            const isLastDot = (col === cols - 1 && row === dotsInCol - 1);
+            colDots.push(
+              <div 
+                key={`${col}-${row}`} 
+                className={`w-2.5 h-2.5 rounded-full ${isLastDot && blinkingNum === count ? 'bg-yellow-400 animate-pulse' : 'bg-green-500'}`} 
+              />
+            );
+          }
+          dots.push(
+            <div key={col} className="flex flex-col gap-0.5">
+              {colDots}
+            </div>
+          );
+        }
+        return dots;
+      };
+
+      const handleNumberClick = (num) => {
+        if (selectedNumbers.includes(num)) {
+          setSelectedNumbers(selectedNumbers.filter(n => n !== num));
+        } else {
+          setSelectedNumbers([...selectedNumbers, num]);
+          // 设置闪烁的数字
+          setBlinkingNumber(num);
+          setTimeout(() => setBlinkingNumber(null), 1000);
+        }
+      };
+
+      return (
+        <div className="py-8">
+          <p className="text-center text-gray-600 mb-8">
+            点击数字查看对应数量的圆片（带闪烁效果）
+          </p>
+
+          {/* 重置按钮 */}
+          <div className="flex justify-center mb-8">
+            <button 
+              onClick={() => setSelectedNumbers([])}
+              className="px-8 py-3 bg-amber-500 text-white font-semibold rounded-full hover:bg-amber-600 transition-colors shadow-lg"
+            >
+              重置
+            </button>
+          </div>
+
+          {/* 带绿色渐变阴影的数轴 */}
+          <div className="relative py-12">
+            {/* 绿色渐变阴影 */}
+            
+            <NumberLine 
+              highlightNumbers={[1, 5, 10, 20]} 
+              showArrows={true}
+              showGradientBelow={true}
+              onNumberClick={handleNumberClick}
+            />
+            
+            {/* 圆点显示在对应数字下方 */}
+            <div className="absolute inset-0 px-4" style={{ top: '140px' }}>
+              {numbers.map((num) => {
+                const position = (num / 20) * 100;
+                const isSelected = selectedNumbers.includes(num);
+                
+                return (
+                  <div
+                    key={num}
+                    className="absolute transform -translate-x-1/2"
+                    style={{ left: `${position}%` }}
+                  >
+                    {isSelected && num > 0 && (
+                      <div className="flex gap-0.5">
+                        {renderDots(num, blinkingNumber)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 界面3.2 - 增强渐变粗细和字体大小
+    function View3SizeEnhancedGradient() {
       const [selectedNumbers, setSelectedNumbers] = useState([]);
       const numbers = Array.from({ length: 21 }, (_, i) => i);
 
@@ -317,11 +457,11 @@
           const colDots = [];
           for (let row = 0; row < dotsInCol; row++) {
             colDots.push(
-              <div key={`${col}-${row}`} className="w-2.5 h-2.5 bg-green-500 rounded-full" />
+              <div key={`${col}-${row}`} className="w-3 h-3 bg-blue-500 rounded-full" />
             );
           }
           dots.push(
-            <div key={col} className="flex flex-col gap-0.5">
+            <div key={col} className="flex flex-col gap-1">
               {colDots}
             </div>
           );
@@ -329,13 +469,10 @@
         return dots;
       };
 
-      // 数轴粗细渐变
-      const getLineHeight = (num) => 1 + (num / 20) * 5;
-
       return (
         <div className="py-8">
           <p className="text-center text-gray-600 mb-8">
-            点击数字查看对应数量的圆片
+            点击数字查看对应数量的圆片（增强渐变效果）
           </p>
 
           {/* 重置按钮 */}
@@ -357,23 +494,31 @@
               <path d="M0 8 L24 8 L20 4 M24 8 L20 12" stroke="#374151" strokeWidth="2" fill="none" />
             </svg>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-3 bg-gray-800" />
+              <div className="w-8 h-5 bg-gray-800" />
               <span className="text-sm text-gray-600">粗 (大)</span>
             </div>
           </div>
           
-          {/* 自定义渐变粗细数轴 */}
+          {/* 增强渐变粗细的数轴 */}
           <div className="relative py-12">
-            {/* 渐变粗细的数轴线 */}
-            <svg className="w-full h-2" preserveAspectRatio="none" viewBox="0 0 100 8">
-              <polygon points="0,3 100,0 100,8 0,5" fill="#1f2937" />
+            {/* 更明显的渐变粗细数轴线 */}
+            <svg className="w-full h-3" preserveAspectRatio="none" viewBox="0 0 100 12">
+              <polygon points="0,4 100,0 100,12 0,8" fill="#1f2937" />
             </svg>
+            
+            {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接 */}
+            <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-0" style={{ transform: 'translateY(-50%) translateX(30px)' }}>
+              <svg width="46" height="16" viewBox="0 0 46 16" fill="none">
+                <rect x="0" y="6" width="30" height="4" fill="#374151" />
+                <path d="M46 8L34 0L34 6L30 6L30 10L34 10L34 16L46 8Z" fill="#374151" />
+              </svg>
+            </div>
             
             <div className="absolute inset-0 px-4" style={{ top: '48px' }}>
               {numbers.map((num) => {
                 const position = (num / 20) * 100;
-                const tickHeight = 8 + (num / 20) * 8;
-                const fontSize = 14 + (num / 20) * 10;
+                const tickHeight = 8 + (num / 20) * 12; // 增强刻度高度
+                const fontSize = 14 + (num / 20) * 16; // 增强字体大小
                 const isSelected = selectedNumbers.includes(num);
                 const isRedNumber = [1, 5, 10, 20].includes(num);
                 
@@ -385,7 +530,7 @@
                   >
                     {/* 刻度线 */}
                     <div 
-                      className={`w-0.5 ${isRedNumber ? 'bg-red-500' : 'bg-gray-800'}`}
+                      className={`w-1 ${isRedNumber ? 'bg-red-500' : 'bg-gray-800'}`}
                       style={{ 
                         height: `${tickHeight}px`,
                         marginTop: `-${tickHeight}px`
@@ -394,8 +539,8 @@
                     
                     {/* 数字 */}
                     <div 
-                      className={`absolute top-2 left-1/2 transform -translate-x-1/2 font-semibold cursor-pointer hover:scale-110 transition-transform ${
-                        isSelected ? 'bg-yellow-100 px-1 rounded' : ''
+                      className={`absolute top-2 left-1/2 transform -translate-x-1/2 font-bold cursor-pointer hover:scale-110 transition-transform ${
+                        isSelected ? 'bg-yellow-100 px-2 rounded' : ''
                       } ${isRedNumber ? 'text-red-500' : 'text-gray-700'}`}
                       style={{ fontSize: `${fontSize}px` }}
                       onClick={() => {
@@ -411,7 +556,7 @@
                     
                     {/* 圆点显示在对应数字下方 */}
                     {isSelected && num > 0 && (
-                      <div className="absolute top-10 left-1/2 transform -translate-x-1/2 flex gap-0.5" style={{ marginTop: `${fontSize}px` }}>
+                      <div className="absolute top-10 left-1/2 transform -translate-x-1/2 flex gap-1" style={{ marginTop: `${fontSize}px` }}>
                         {renderDots(num)}
                       </div>
                     )}
@@ -420,6 +565,99 @@
               })}
             </div>
           </div>
+        </div>
+      );
+    }
+
+    // 界面3.3 - 标准数轴，可点击1/5/10/20，区间标绿
+    function View3SizeStandard() {
+      const [selectedNumbers, setSelectedNumbers] = useState([]);
+      const clickableNumbers = [1, 5, 10, 20];
+
+      const handleNumberClick = (num) => {
+        if (clickableNumbers.includes(num)) {
+          if (selectedNumbers.includes(num)) {
+            setSelectedNumbers(selectedNumbers.filter(n => n !== num));
+          } else {
+            setSelectedNumbers([...selectedNumbers, num]);
+          }
+        }
+      };
+
+      // 获取需要高亮的区间（包括该数字）
+      const getHighlightedNumbers = () => {
+        const highlighted = [];
+        selectedNumbers.forEach(num => {
+          for (let i = 0; i <= num; i++) {
+            if (!highlighted.includes(i)) {
+              highlighted.push(i);
+            }
+          }
+        });
+        return highlighted;
+      };
+
+      const highlightedNumbers = getHighlightedNumbers();
+
+      return (
+        <div className="py-8">
+          <p className="text-center text-gray-600 mb-8">
+            点击数字 1、5、10、20 查看对应区间（数轴区间变绿）
+          </p>
+
+          {/* 重置按钮 */}
+          <div className="flex justify-center mb-8">
+            <button 
+              onClick={() => setSelectedNumbers([])}
+              className="px-8 py-3 bg-amber-500 text-white font-semibold rounded-full hover:bg-amber-600 transition-colors shadow-lg"
+            >
+              重置
+            </button>
+          </div>
+
+          {/* 标准数轴 */}
+          <div className="relative py-12">
+            <NumberLine 
+              highlightNumbers={highlightedNumbers} 
+              showArrows={true}
+              onNumberClick={handleNumberClick}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // 界面3主组件 - 包含三个子页面的切换
+    function View3Size() {
+      const [activeSubView, setActiveSubView] = useState(1);
+      const subViews = [
+        { id: 1, name: '带箭头闪烁', component: View3SizeWithArrows },
+        { id: 2, name: '增强渐变', component: View3SizeEnhancedGradient },
+        { id: 3, name: '标准区间', component: View3SizeStandard },
+      ];
+      const ActiveSubComponent = subViews.find(v => v.id === activeSubView)?.component || View3SizeWithArrows;
+
+      return (
+        <div>
+          {/* 子页面切换按钮 */}
+          <div className="flex justify-center gap-2 mb-6">
+            {subViews.map((view) => (
+              <button
+                key={view.id}
+                onClick={() => setActiveSubView(view.id)}
+                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                  activeSubView === view.id 
+                    ? 'bg-green-600 text-white shadow-lg scale-105' 
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+              >
+                {view.name}
+              </button>
+            ))}
+          </div>
+          
+          {/* 当前子页面 */}
+          <ActiveSubComponent />
         </div>
       );
     }
@@ -493,6 +731,13 @@
         <div ref={containerRef} className="relative select-none" onMouseMove={handleDragMove} onMouseUp={handleDragEnd} onMouseLeave={handleDragEnd} onTouchMove={handleDragMove} onTouchEnd={handleDragEnd}>
           <div className="relative py-12 px-10 mb-8">
             <div className="relative h-1 bg-gray-800 rounded-full">
+              {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接，加粗 */}
+              <div className="absolute right-0 top-1/2 transform -translate-y-1/2" style={{ marginRight: '-30px' }}>
+                <svg width="46" height="24" viewBox="0 0 46 24" fill="none">
+                  <rect x="0" y="8" width="30" height="8" fill="#374151" />
+                  <path d="M46 12L34 4L34 8L30 8L30 16L34 16L34 20L46 12Z" fill="#374151" />
+                </svg>
+              </div>
               {Array.from({ length: 21 }, (_, i) => i).map((num) => {
                 const position = (num / 20) * 100;
                 const isHidden = hideNumbers.includes(num);
@@ -510,18 +755,18 @@
                 const isPlaced = items.find(i => i.value === pos)?.placed;
                 return (
                   <div key={pos} className="absolute transform -translate-x-1/2" style={{ left: `${position}%`, top: '30px' }}>
-                    <div className={`w-16 h-10 border-4 ${isPlaced ? 'border-green-500 bg-green-100' : 'border-red-500 bg-red-50'} rounded`} />
+                    <div className={`w-12 h-8 border-4 ${isPlaced ? 'border-green-500 bg-green-100' : 'border-red-500 bg-red-50'} rounded`} />
                   </div>
                 );
               })}
               
               {items.filter(i => i.placed).map((item) => (
                 <div key={`placed-${item.id}`} className="absolute transform -translate-x-1/2" style={{ left: `${getPlacedPosition(item.value)}%`, top: '30px' }}>
-                  <div className="w-16 h-10 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg">
+                  <div className="w-12 h-8 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg">
                     <img 
                       src={item.image} 
                       alt={item.label} 
-                      className="w-12 h-12 object-contain"
+                      className="w-10 h-10 object-contain"
                       onLoad={() => console.log('Image loaded successfully:', item.image)}
                       onError={(e) => {
                         console.error('Image failed to load:', item.image);
@@ -530,7 +775,7 @@
                         e.target.nextSibling.style.display = 'block';
                       }}
                     />
-                    <div style={{ display: 'none' }} className="text-xl font-bold text-blue-800">
+                    <div style={{ display: 'none' }} className="text-lg font-bold text-blue-800">
                       {item.value}
                     </div>
                   </div>
@@ -597,10 +842,14 @@
       const moneyNum = parseFloat(myMoney);
       const priceNum = parseFloat(itemPrice);
       const highlightNumbers = showResult ? [moneyNum, priceNum].filter(n => !isNaN(n)) : [];
-      // 红色箭头表示我的钱，黑色箭头表示物品价格
+      // 红色箭头表示我的钱，黑色箭头表示物品价格 - 即使相等也显示两个箭头
       const arrowColors = {};
       if (showResult && !isNaN(moneyNum)) arrowColors[moneyNum] = '#ef4444';
-      if (showResult && !isNaN(priceNum)) arrowColors[priceNum] = '#1f2937';
+      if (showResult && !isNaN(priceNum)) {
+        // 如果价格和钱相等，稍微偏移一下价格箭头的位置，避免完全重叠
+        const arrowKey = moneyNum === priceNum ? priceNum + 0.001 : priceNum;
+        arrowColors[arrowKey] = '#1f2937';
+      }
 
       const getCompareResult = () => {
         if (!showResult || isNaN(moneyNum) || isNaN(priceNum)) return null;
@@ -676,9 +925,11 @@
       const views = [
         { id: 1, name: '基础数轴', component: View1Basic },
         { id: 2, name: '拖拽练习', component: View2Drag },
-        { id: 3, name: '感受大小', component: View3Size },
-        { id: 4, name: '钱币对应', component: View4Money },
-        { id: 5, name: '比较大小', component: View5Compare },
+        { id: 3, name: '带箭头闪烁', component: View3SizeWithArrows },
+        { id: 4, name: '增强渐变', component: View3SizeEnhancedGradient },
+        { id: 5, name: '标准区间', component: View3SizeStandard },
+        { id: 6, name: '钱币对应', component: View4Money },
+        { id: 7, name: '比较大小', component: View5Compare },
       ];
       const ActiveComponent = views.find(v => v.id === activeView)?.component || View1Basic;
 
@@ -853,6 +1104,14 @@
                 );
               })()}
               <div className="relative h-1 bg-gray-800 rounded-full">
+                {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接 */}
+                <div className="absolute right-0 top-1/2 transform -translate-y-1/2" style={{ marginRight: '-30px' }}>
+                  <svg width="46" height="16" viewBox="0 0 46 16" fill="none">
+                    <rect x="0" y="6" width="30" height="4" fill="#374151" />
+                    <path d="M46 8L34 0L34 6L30 6L30 10L34 10L34 16L46 8Z" fill="#374151" />
+                  </svg>
+                </div>
+                
                 {Array.from({ length: 21 }, (_, i) => i).map((num) => {
                   const position = (num / 20) * 100;
                   const isInZoomRange = zoomRange && (num === zoomRange.start || num === zoomRange.end);
