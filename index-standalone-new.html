@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数轴教学工具</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="text-4xl font-bold mb-4">数轴教学工具</h1>
+            <p class="text-xl opacity-90">互动式数学学习平台</p>
+        </div>
+        <div class="content">
+            <div id="root"></div>
+        </div>
+    </div>
+
+    <!-- 导入所有组件 -->
+    <script src="components/NumberLine.js"></script>
+    <script src="components/View1Basic.js"></script>
+    <script src="components/View2Drag.js"></script>
+    <script src="components/View3SizeWithArrows.js"></script>
+    <script src="components/View3SizeEnhancedGradient.js"></script>
+    <script src="components/View3SizeStandard.js"></script>
+    <script src="components/View4Money.js"></script>
+    <script src="components/View5Compare.js"></script>
+    <script src="components/DecimalModule.js"></script>
+    <script src="components/NumberLineModule.js"></script>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // 主应用组件
+        function App() {
+          const [activeModule, setActiveModule] = useState('numberline');
+
+          return (
+            <div>
+              {activeModule === 'numberline' && <NumberLineModule />}
+              {activeModule === 'decimal' && <DecimalModule />}
+            </div>
+          );
+        }
+
+        // 渲染应用
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
