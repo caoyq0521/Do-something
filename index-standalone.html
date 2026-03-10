@@ -24,7 +24,7 @@
     const { useState, useRef } = React;
 
     // 通用数轴组件
-    function NumberLine({ min = 0, max = 20, highlightNumbers = [], showArrows = true, gradientThickness = false, gradientFontSize = false, hideNumbers = [], showGradientBelow = false, arrowColors = {}, onNumberClick = null }) {
+    function NumberLine({ min = 0, max = 20, highlightNumbers = [], showArrows = true, gradientThickness = false, gradientFontSize = false, hideNumbers = [], showGradientBelow = false, showGreen = false, arrowColors = {}, onNumberClick = null }) {
       const numbers = Array.from({ length: max - min + 1 }, (_, i) => min + i);
       
       const getThickness = (num) => {
@@ -59,13 +59,14 @@
         <div className="relative py-12 px-4">
           <div className="relative h-1 bg-gray-800 rounded-full">
             {/* 区间高亮 - 绿色覆盖 */}
-            {highlightNumbers.length > 0 && (
+            {showGreen && highlightNumbers.length > 0 && (
               <div 
-                className="absolute top-0 h-full bg-green-400 rounded-full"
+                className="absolute top-0 h-2 bg-green-400 rounded-full"
                 style={{
                   left: '0%',
                   width: `${Math.max(...highlightNumbers) / 20 * 100}%`,
-                  opacity: 0.6
+                  zIndex: 9,
+                  transform: 'translateY(-20%)'
                 }}
               />
             )}
@@ -81,7 +82,7 @@
             )}
 
             {/* 2px阴影线，颜色随数字变大而变深，紧挨着数轴下方 */}
-            {showGradientBelow  && <svg className="absolute inset-x-0 top-1.4 w-full h-1" preserveAspectRatio="none" viewBox="0 0 100 2">
+            {showGradientBelow  && <svg className="absolute inset-x-0 top-1.4 w-full h-1" preserveAspectRatio="none" viewBox="0 0 100 2" style={{ zIndex: 9 }}>
               <defs>
                 <linearGradient id="decimalGreenGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#86efac" />
@@ -91,7 +92,6 @@
                   <stop offset="100%" stopColor="#15803d" />
                 </linearGradient>
               </defs>
-              <rect x="0" y="0" width="100" height="2" fill="url(#decimalGreenGradient)" />
             </svg>}
             
             {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接 */}
@@ -116,7 +116,7 @@
                 >
                   {/* 刻度线只在上方显示 */}
                   <div 
-                    className={`w-0.5 ${isRedNumber ? 'bg-red-500' : 'bg-gray-800'}`}
+                    className={`w-0.5 ${isHighlighted ? 'bg-green-500' : (isRedNumber ? 'bg-red-500' : 'bg-gray-800')}`}
                     style={{ 
                       height: `${12 + getThickness(num)}px`,
                       marginTop: `-${12 + getThickness(num)}px`
@@ -283,9 +283,9 @@
             <div className="relative h-1 bg-gray-800 rounded-full">
               {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接，加粗 */}
               <div className="absolute right-0 top-1/2 transform -translate-y-1/2" style={{ marginRight: '-30px' }}>
-                <svg width="46" height="24" viewBox="0 0 46 24" fill="none">
-                  <rect x="0" y="8" width="30" height="8" fill="#374151" />
-                  <path d="M46 12L34 4L34 8L30 8L30 16L34 16L34 20L46 12Z" fill="#374151" />
+                <svg width="46" height="16" viewBox="0 0 46 16" fill="none">
+                  <rect x="0" y="6" width="30" height="4" fill="#374151" />
+                  <path d="M46 8L34 0L34 6L30 6L30 10L34 10L34 16L46 8Z" fill="#374151" />
                 </svg>
               </div>
               
@@ -305,14 +305,14 @@
                 const position = (pos / 20) * 100;
                 const isPlaced = items.find(i => i.value === pos)?.placed;
                 return (
-                  <div key={pos} className="absolute transform -translate-x-1/2" style={{ left: `${position}%`, top: '30px' }}>
+                  <div key={pos} className="absolute transform -translate-x-1/2" style={{ left: `${position}%`, top: '20px' }}>
                     <div className={`w-12 h-8 border-4 ${isPlaced ? 'border-green-500 bg-green-100' : 'border-red-500 bg-red-50'} rounded`} />
                   </div>
                 );
               })}
               
               {items.filter(i => i.placed).map((item) => (
-                <div key={`placed-${item.id}`} className="absolute transform -translate-x-1/2" style={{ left: `${getPlacedPosition(item.value)}%`, top: '30px' }}>
+                <div key={`placed-${item.id}`} className="absolute transform -translate-x-1/2" style={{ left: `${getPlacedPosition(item.value)}%`, top: '20px' }}>
                   <div className="w-12 h-8 rounded-xl bg-white border-2 border-blue-800 flex items-center justify-center shadow-lg">
                     <span className="text-xl font-bold text-blue-800">{item.value}</span>
                   </div>
@@ -407,10 +407,17 @@
 
           {/* 带绿色渐变阴影的数轴 */}
           <div className="relative py-12">
-            {/* 绿色渐变阴影 */}
+            {/* 绿色渐变背景 */}
+            <div 
+              className="absolute inset-x-0 h-20 rounded-lg"
+              style={{
+                top: '56px',
+                background: 'linear-gradient(to right, #dcfce7 0%, #bbf7d0 25%, #86efac 50%, #4ade80 75%, #22c55e 100%)',
+                opacity: 0.8
+              }}
+            />
             
             <NumberLine 
-              highlightNumbers={[1, 5, 10, 20]} 
               showArrows={true}
               showGradientBelow={true}
               onNumberClick={handleNumberClick}
@@ -457,7 +464,7 @@
           const colDots = [];
           for (let row = 0; row < dotsInCol; row++) {
             colDots.push(
-              <div key={`${col}-${row}`} className="w-3 h-3 bg-blue-500 rounded-full" />
+              <div key={`${col}-${row}`} className="w-3 h-3 bg-green-500 rounded-full" />
             );
           }
           dots.push(
@@ -509,8 +516,8 @@
             {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接 */}
             <div className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-0" style={{ transform: 'translateY(-50%) translateX(30px)' }}>
               <svg width="46" height="16" viewBox="0 0 46 16" fill="none">
-                <rect x="0" y="6" width="30" height="4" fill="#374151" />
-                <path d="M46 8L34 0L34 6L30 6L30 10L34 10L34 16L46 8Z" fill="#374151" />
+                <rect x="0" y="2" width="30" height="12" fill="#1f2937" />
+                <path d="M46 8L26 0L26 6L30 6L30 10L26 10L26 16L46 8Z" fill="#1f2937" />
               </svg>
             </div>
             
@@ -598,6 +605,12 @@
       };
 
       const highlightedNumbers = getHighlightedNumbers();
+      
+      // 为选中的数字生成红色箭头
+      const arrowColors = {};
+      selectedNumbers.forEach(num => {
+        arrowColors[num] = '#ef4444'; // 红色
+      });
 
       return (
         <div className="py-8">
@@ -619,7 +632,9 @@
           <div className="relative py-12">
             <NumberLine 
               highlightNumbers={highlightedNumbers} 
+              showGreen={true}
               showArrows={true}
+              arrowColors={arrowColors}
               onNumberClick={handleNumberClick}
             />
           </div>
@@ -733,9 +748,9 @@
             <div className="relative h-1 bg-gray-800 rounded-full">
               {/* 右端箭头 - 指向左，向右偏移30px并与数轴连接，加粗 */}
               <div className="absolute right-0 top-1/2 transform -translate-y-1/2" style={{ marginRight: '-30px' }}>
-                <svg width="46" height="24" viewBox="0 0 46 24" fill="none">
-                  <rect x="0" y="8" width="30" height="8" fill="#374151" />
-                  <path d="M46 12L34 4L34 8L30 8L30 16L34 16L34 20L46 12Z" fill="#374151" />
+                <svg width="46" height="16" viewBox="0 0 46 16" fill="none">
+                  <rect x="0" y="6" width="30" height="4" fill="#374151" />
+                  <path d="M46 8L34 0L34 6L30 6L30 10L34 10L34 16L46 8Z" fill="#374151" />
                 </svg>
               </div>
               {Array.from({ length: 21 }, (_, i) => i).map((num) => {
