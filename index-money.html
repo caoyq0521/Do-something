@@ -274,6 +274,7 @@
       padding: 30px 20px 20px;
       text-align: center;
       color: #fff;
+      border-radius: 16px 16px 0 0;
     }
 
     .modal-header-blue .greeting {
@@ -406,18 +407,6 @@
 <body>
 
   <div id="app">
-    <!-- ================= 1. 考勤卡片 ================= -->
-    <div class="msg-card">
-      <div class="msg-title">工作辛苦了，上周考勤无任何异常，太棒了！</div>
-      <div class="msg-date">5月第3周（05-11 至 05-17）</div>
-      <div class="msg-actions">
-        <button class="msg-btn secondary">通知设置</button>
-        <button class="msg-btn primary">查看详情</button>
-      </div>
-    </div>
-
-    <!-- 时间分割 -->
-    <div class="timeline-divider">5月18日 19:13</div>
 
     <!-- ================= 2. 工资条通知卡片 ================= -->
     <div class="msg-card salary-notification">
@@ -431,23 +420,9 @@
         <div class="salary-banner">
           <img src="./images/banner.png" alt="插画">
         </div>
-        <div class="salary-title">2026年04月工资条</div>
+        <div class="salary-title">2026年06月工资条</div>
         <div class="salary-desc">感谢您的辛勤劳动，请及时查看工资条</div>
         <button class="btn-view-details" id="openModalBtn">查看明细</button>
-      </div>
-    </div>
-
-    <!-- 时间分割 -->
-    <div class="timeline-divider">5月18日 19:46</div>
-
-    <!-- ================= 3. 打卡提醒卡片 ================= -->
-    <div class="msg-card clock-in-card">
-      <div class="clock-icon-wrapper">
-        <img src="./images/icon_clock.png" alt="打卡">
-      </div>
-      <div class="clock-content">
-        <div class="clock-header">打卡提醒</div>
-        <div class="clock-time-box">20:00 上班打卡提醒</div>
       </div>
     </div>
   </div>
@@ -460,7 +435,7 @@
         <!-- 蓝色头部 -->
         <div class="modal-header-blue">
           <div class="greeting">凌小明，工作辛苦啦</div>
-          <div class="total-salary">6449.46</div>
+          <div class="total-salary">6334.35</div>
           <div class="sub-label">实发工资</div>
         </div>
 
@@ -481,10 +456,10 @@
           <div class="salary-item"><span class="label">岗位工资</span><span class="value">3250</span></div>
           <div class="salary-item"><span class="label">餐补</span><span class="value">450</span></div>
           <div class="salary-item"><span class="label">住宿补助</span><span class="value">300</span></div>
-          <div class="salary-item"><span class="label">加班费</span><span class="value">1008.62</span></div>
-          <div class="salary-item"><span class="label">养老</span><span class="value">940.56</span></div>
-          <div class="salary-item"><span class="label">医疗</span><span class="value">235.14</span></div>
-          <div class="salary-item"><span class="label">失业</span><span class="value">35.27</span></div>
+          <div class="salary-item"><span class="label">加班费</span><span class="value">517.24</span></div>
+          <div class="salary-item"><span class="label">养老</span><span class="value">650.16</span></div>
+          <div class="salary-item"><span class="label">医疗</span><span class="value">162.24</span></div>
+          <div class="salary-item"><span class="label">失业</span><span class="value">24.38</span></div>
           <div class="salary-item"><span class="label">公积金</span><span class="value">553.36</span></div>
           <div class="salary-item"><span class="label">个人所得税</span><span class="value">44.83</span></div>
         </div>
