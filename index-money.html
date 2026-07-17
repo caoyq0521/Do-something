@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>工资条详情</title>
+
+  <style>
+    /* ==========================================
+           基础重置
+           ========================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f2f3f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #333;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==========================================
+           App 容器 (适配移动端/PC窗口)
+           ========================================== */
+    #app {
+      max-width: 450px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: #f2f3f5;
+      padding: 15px;
+      position: relative;
+    }
+
+    /* ==========================================
+           消息卡片 (通用)
+           ========================================== */
+    .msg-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px 16px 12px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    .msg-title {
+      font-size: 15px;
+      color: #333;
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .msg-date {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 15px;
+    }
+
+    .msg-actions {
+      display: flex;
+      gap: 12px;
+      padding-top: 15px;
+      border-top: 1px solid #f0f0f0;
+    }
+
+    .msg-btn {
+      flex: 1;
+      height: 36px;
+      border-radius: 20px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      cursor: pointer;
+      background: #fff;
+    }
+
+    .msg-btn.secondary {
+      background: #f5f5f5;
+      color: #666;
+    }
+
+    .msg-btn.primary {
+      color: #1677ff;
+      font-weight: 500;
+    }
+
+    /* ==========================================
+           时间轴分割线
+           ========================================== */
+    .timeline-divider {
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+      margin: 20px 0 15px;
+    }
+
+    /* ==========================================
+           工资条入口卡片
+           ========================================== */
+    .salary-notification {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .salary-icon-wrapper {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .salary-icon-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .salary-content {
+      flex: 1;
+    }
+
+    .salary-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .salary-banner {
+      border-radius: 8px;
+      height: 110px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 12px;
+      background-color: #ef7e69;
+    }
+
+    .salary-banner img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .salary-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .salary-desc {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 15px;
+    }
+
+    .btn-view-details {
+      width: 100%;
+      height: 40px;
+      border-radius: 20px;
+      background: #f7f8fa;
+      border: none;
+      color: #333;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-view-details:active {
+      background: #e5e6eb;
+    }
+
+    /* ==========================================
+           打卡提醒卡片
+           ========================================== */
+    .clock-in-card {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .clock-icon-wrapper {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .clock-icon-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .clock-header {
+      font-size: 15px;
+      color: #333;
+      margin-bottom: 4px;
+    }
+
+    .clock-time-box {
+      background: #e6f4ff;
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: #1677ff;
+      font-weight: 500;
+      font-size: 15px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    /* ==========================================
+           弹窗遮罩层 (纯CSS平滑动画)
+           ========================================== */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content-wrapper {
+      width: 100%;
+      max-width: 450px;
+      background: #f7f8fa;
+      border-radius: 16px 16px 0 0;
+      height: 90vh;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    .modal-overlay.active .modal-content-wrapper {
+      transform: translateY(0);
+    }
+
+    .modal-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 90px;
+      /* 留出底部按钮空间 */
+    }
+
+    /* 隐藏滚动条 */
+    .modal-scroll-area::-webkit-scrollbar {
+      display: none;
+    }
+
+    .modal-header-blue {
+      background: linear-gradient(135deg, #5da7fe 0%, #3b8bfd 100%);
+      padding: 30px 20px 20px;
+      text-align: center;
+      color: #fff;
+    }
+
+    .modal-header-blue .greeting {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 8px;
+    }
+
+    .modal-header-blue .total-salary {
+      font-size: 40px;
+      font-weight: 500;
+      letter-spacing: 1px;
+    }
+
+    .modal-header-blue .sub-label {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .modal-tip {
+      background: #fffbe6;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-tip .left {
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .modal-tip .left span {
+      display: block;
+      font-weight: normal;
+      font-size: 13px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .modal-tip .close-icon {
+      color: #999;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 5px;
+      user-select: none;
+    }
+
+    .salary-list {
+      background: #fff;
+      padding: 0 16px;
+    }
+
+    .salary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 0;
+      font-size: 14px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .salary-item:last-child {
+      border-bottom: none;
+    }
+
+    .salary-item .label {
+      color: #333;
+    }
+
+    .salary-item .value {
+      color: #333;
+      font-weight: 500;
+    }
+
+    /* 底部操作栏 (浮在弹窗底部) */
+    .modal-footer-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      padding: 10px 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #f0f0f0;
+      border-radius: 0 0 16px 16px;
+    }
+
+    .footer-left-icons {
+      display: flex;
+      gap: 20px;
+    }
+
+    .icon-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #333;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .icon-wrapper img {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 2px;
+    }
+
+    .btn-confirm {
+      width: 140px;
+      height: 44px;
+      background: #3b8bfd;
+      color: #fff;
+      border-radius: 22px;
+      border: none;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-confirm:active {
+      background: #2f72d6;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="app">
+    <!-- ================= 1. 考勤卡片 ================= -->
+    <div class="msg-card">
+      <div class="msg-title">工作辛苦了，上周考勤无任何异常，太棒了！</div>
+      <div class="msg-date">5月第3周（05-11 至 05-17）</div>
+      <div class="msg-actions">
+        <button class="msg-btn secondary">通知设置</button>
+        <button class="msg-btn primary">查看详情</button>
+      </div>
+    </div>
+
+    <!-- 时间分割 -->
+    <div class="timeline-divider">5月18日 19:13</div>
+
+    <!-- ================= 2. 工资条通知卡片 ================= -->
+    <div class="msg-card salary-notification">
+      <!-- 请确保同级目录下有 images 文件夹，并放入了 icon_salary.png -->
+      <div class="salary-icon-wrapper">
+        <img src="./images/icon_salary.png" alt="图标">
+      </div>
+      <div class="salary-content">
+        <div class="salary-header"><span>智能工资条</span></div>
+        <!-- 请确保同级目录下有 images 文件夹，并放入了 banner.png -->
+        <div class="salary-banner">
+          <img src="./images/banner.png" alt="插画">
+        </div>
+        <div class="salary-title">2026年04月工资条</div>
+        <div class="salary-desc">感谢您的辛勤劳动，请及时查看工资条</div>
+        <button class="btn-view-details" id="openModalBtn">查看明细</button>
+      </div>
+    </div>
+
+    <!-- 时间分割 -->
+    <div class="timeline-divider">5月18日 19:46</div>
+
+    <!-- ================= 3. 打卡提醒卡片 ================= -->
+    <div class="msg-card clock-in-card">
+      <div class="clock-icon-wrapper">
+        <img src="./images/icon_clock.png" alt="打卡">
+      </div>
+      <div class="clock-content">
+        <div class="clock-header">打卡提醒</div>
+        <div class="clock-time-box">20:00 上班打卡提醒</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 4. 弹窗 (默认隐藏) ================= -->
+  <div class="modal-overlay" id="salaryModal">
+    <div class="modal-content-wrapper">
+      <!-- 滚动内容区 -->
+      <div class="modal-scroll-area">
+        <!-- 蓝色头部 -->
+        <div class="modal-header-blue">
+          <div class="greeting">凌小明，工作辛苦啦</div>
+          <div class="total-salary">6449.46</div>
+          <div class="sub-label">实发工资</div>
+        </div>
+
+        <!-- 黄色温馨提示 -->
+        <div class="modal-tip">
+          <div class="left">
+            温馨提示
+            <span>工资条属于敏感信息，请注意保密</span>
+          </div>
+          <div class="close-icon" id="closeTipBtn">✕</div>
+        </div>
+
+        <!-- 工资列表 -->
+        <div class="salary-list">
+          <div class="salary-item"><span class="label">姓名</span><span class="value">凌小明</span></div>
+          <div class="salary-item"><span class="label">工资基数</span><span class="value">6500</span></div>
+          <div class="salary-item"><span class="label">基本工资</span><span class="value">3250</span></div>
+          <div class="salary-item"><span class="label">岗位工资</span><span class="value">3250</span></div>
+          <div class="salary-item"><span class="label">餐补</span><span class="value">450</span></div>
+          <div class="salary-item"><span class="label">住宿补助</span><span class="value">300</span></div>
+          <div class="salary-item"><span class="label">加班费</span><span class="value">1008.62</span></div>
+          <div class="salary-item"><span class="label">养老</span><span class="value">940.56</span></div>
+          <div class="salary-item"><span class="label">医疗</span><span class="value">235.14</span></div>
+          <div class="salary-item"><span class="label">失业</span><span class="value">35.27</span></div>
+          <div class="salary-item"><span class="label">公积金</span><span class="value">553.36</span></div>
+          <div class="salary-item"><span class="label">个人所得税</span><span class="value">44.83</span></div>
+        </div>
+      </div>
+
+      <!-- 底部固定栏 -->
+      <div class="modal-footer-bar">
+        <div class="footer-left-icons">
+          <div class="icon-wrapper">
+            <img src="./images/icon_user.png" alt="疑问">
+            <span>工资疑问</span>
+          </div>
+          <div class="icon-wrapper">
+            <img src="./images/icon_loan.png" alt="贷款">
+            <span>员工贷</span>
+          </div>
+        </div>
+        <button class="btn-confirm" id="confirmBtn">确认无误</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 原生 JavaScript (无需任何框架)
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function () {
+      const modal = document.getElementById('salaryModal');
+      const openBtn = document.getElementById('openModalBtn');
+      const closeTipBtn = document.getElementById('closeTipBtn');
+      const confirmBtn = document.getElementById('confirmBtn');
+
+      // 1. 打开弹窗
+      function openModal () {
+        modal.classList.add('active');
+        // 禁止背景页面滚动
+        document.body.style.overflow = 'hidden';
+      }
+
+      // 2. 关闭弹窗
+      function closeModal () {
+        modal.classList.remove('active');
+        // 恢复背景页面滚动
+        document.body.style.overflow = 'auto';
+      }
+
+      // 绑定点击事件
+      openBtn.addEventListener('click', openModal);
+      closeTipBtn.addEventListener('click', closeModal);
+      confirmBtn.addEventListener('click', closeModal);
+
+      // 点击遮罩层（半透明黑色背景）也能关闭弹窗
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) {
+          closeModal();
+        }
+      });
+    });
+  </script>
+
+</body>
+
+</html>
